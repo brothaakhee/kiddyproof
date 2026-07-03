@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Hardened-runtime entitlements. Deliberately EMPTY: the suppressing CGEventTap
+     needs the parent-granted Accessibility TCC permission, not an entitlement, and
+     the app must NOT be sandboxed (CGEventTapCreate returns NULL under the sandbox).
+     Sparkle 2.x needs no extra entitlements in a non-sandboxed app. -->
+<dict/>
+</plist>

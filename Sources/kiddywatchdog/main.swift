@@ -1,4 +1,5 @@
 import Foundation
+import KiddyproofCore
 
 // kiddywatchdog — the parent-lockout failsafe.
 //
@@ -9,7 +10,7 @@ import Foundation
 // maximum duration, SIGKILL the main app. Killing the main process tears down its
 // CGEventTap, which immediately restores keyboard and mouse input to the user.
 //
-// Protocol (one command per line on stdin):
+// Protocol (one command per line on stdin — parsed by WatchdogCore, unit-tested):
 //   ARM <maxSeconds>   begin enforcing; start the max-duration deadline
 //   PING               liveness heartbeat (main sends these ~2x/second while armed)
 //   DISARM             stop enforcing (kid mode exited cleanly)
@@ -18,15 +19,13 @@ import Foundation
 let parentPID = getppid()
 
 // Shared enforcement state, guarded by a lock (touched by the reader thread and the
-// enforcement timer).
+// enforcement timer). The decisions themselves live in WatchdogCore.Enforcement.
 final class State {
     let lock = NSLock()
-    var enforcing = false
-    var lastPing = Date()
-    var armDeadline: Date?
-    func snapshot() -> (Bool, Date, Date?) {
+    var enforcement = WatchdogCore.Enforcement()
+    func withLock<T>(_ body: (inout WatchdogCore.Enforcement) -> T) -> T {
         lock.lock(); defer { lock.unlock() }
-        return (enforcing, lastPing, armDeadline)
+        return body(&enforcement)
     }
 }
 let state = State()
@@ -56,19 +55,21 @@ func killMain(reason: String) {
 let timerQueue = DispatchQueue(label: "watchdog.enforce")
 func scheduleCheck() {
     timerQueue.asyncAfter(deadline: .now() + 0.25) {
-        let (enforcing, lastPing, deadline) = state.snapshot()
+        let verdict = state.withLock { $0.verdict(now: Date(), heartbeatGrace: heartbeatGrace) }
+        let enforcing = state.withLock { $0.enforcing }
         if enforcing {
             // Is the parent still alive at all? (kill with signal 0 just probes.)
             if kill(parentPID, 0) != 0 {
                 log("main process gone; exiting.")
                 exit(0)
             }
-            if Date().timeIntervalSince(lastPing) > heartbeatGrace {
-                killMain(reason: "heartbeat lost (>\(heartbeatGrace)s) — main app appears livelocked")
-            }
-            if let d = deadline, Date() >= d {
-                killMain(reason: "max kid-mode duration reached — auto-exit failsafe")
-            }
+        }
+        switch verdict {
+        case .ok: break
+        case .killHeartbeatLost:
+            killMain(reason: "heartbeat lost (>\(heartbeatGrace)s) — main app appears livelocked")
+        case .killDeadline:
+            killMain(reason: "max kid-mode duration reached — auto-exit failsafe")
         }
         scheduleCheck()
     }
@@ -79,27 +80,12 @@ log("started, guarding main pid \(parentPID)")
 
 // Read commands line-by-line from stdin. readLine() returns nil on EOF (parent died).
 while let line = readLine(strippingNewline: true) {
-    let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
-    guard let cmd = parts.first else { continue }
-    switch cmd {
-    case "ARM":
-        let maxSeconds = parts.count > 1 ? (TimeInterval(parts[1]) ?? 120) : 120
-        state.lock.lock()
-        state.enforcing = true
-        state.lastPing = Date()
-        state.armDeadline = Date().addingTimeInterval(maxSeconds)
-        state.lock.unlock()
-        log("ARMED, max duration \(maxSeconds)s")
-    case "PING":
-        state.lock.lock(); state.lastPing = Date(); state.lock.unlock()
-    case "DISARM":
-        state.lock.lock()
-        state.enforcing = false
-        state.armDeadline = nil
-        state.lock.unlock()
-        log("DISARMED (clean exit)")
-    default:
-        break
+    let command = WatchdogCore.parse(line)
+    state.withLock { $0.apply(command, now: Date()) }
+    switch command {
+    case .arm(let maxSeconds): log("ARMED, max duration \(maxSeconds)s")
+    case .disarm: log("DISARMED (clean exit)")
+    case .ping, .unknown: break
     }
 }
 

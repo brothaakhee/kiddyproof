@@ -23,8 +23,10 @@ is purely visual.
 | `EffectsView` | Permission-free Core Graphics feedback driven by the event ring buffer | `NSView`/`CoreGraphics` |
 | `ExitGestureController` | Mouse corner-hold (survives Secure Input) + ⌃⌥⌘ chord, 3s hold | timer + observed deltas |
 | `SecureInputGuard` | Refuses to arm / bails if Secure Event Input is active (irreducible gap) | `IsSecureEventInputEnabled()` |
-| `TapHealthMonitor` (in `AppController`) | "A non-nil tap isn't a healthy tap" — proves live event flow before arming | synthetic event + heartbeat |
-| `kiddywatchdog` | Separate tap-free process; SIGKILLs the app on livelock/timeout → input restored | `Process`, `kill(2)` |
+| `TapHealthMonitor` | Continuous 1 Hz probe while armed: verify → re-enable → recreate → fail-loud disarm | synthetic event + heartbeat |
+| `kiddywatchdog` | Separate tap-free process; SIGKILLs the app on livelock/timeout → input restored. Pings require real tap flow; watchdog death is detected and disarms loudly | `Process`, `kill(2)` |
+| `OnboardingController` | First-launch parent flow: permission grant (live-polled) + the honest-limits disclosure in-product | AppKit |
+| OS hardening (armed) | Kiosk `presentationOptions` (no Force Quit / app switching), display-sleep prevention, clean disarm on sleep/lock/fast-user-switch, display-reconfig reconciliation | `NSApplication.presentationOptions`, `IOPMAssertion`, `NSWorkspace` |
 
 ## Build & run
 ```
@@ -35,11 +37,20 @@ Grant **Accessibility** when prompted, relaunch, then press **⌃⌥⌘K** (or u
 🛡️ item) to enter kid mode. Exit by holding **⌃⌥⌘ for 3s** or **press-and-holding the
 bottom-left corner for 3s**.
 
+## Build, test, package
+```
+swift build                      # debug build (app + watchdog)
+swift test                       # unit tests: settings clamping, watchdog protocol/enforcement, exit-gesture timing
+Scripts/package.sh               # release .app bundle + DMG (ad-hoc signed)
+SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=kiddyproof Scripts/package.sh   # ship
+```
+
 ## Verified
-- ✅ Builds clean (app + watchdog). ✅ Watchdog failsafe (heartbeat-loss, max-duration,
-  clean-disarm). ✅ App boots, tap installs.
-- 🖐️ End-to-end arm/block/effects/exit and the interception matrix require interactive
-  testing — see `POC_TEST_PLAN.md`.
+- ✅ Builds clean (app + watchdog). ✅ Unit tests pass (KiddyproofCore).
+- ✅ Watchdog failsafe live-drilled: heartbeat-loss kill, max-duration kill, clean disarm.
+- ✅ App boots, tap installs, full arm→effects→clean-exit cycle in the KP_DEMO harness.
+- 🖐️ The physical-input interception matrix and secure-input/TCC-revocation drills
+  require interactive testing at the machine — see `POC_TEST_PLAN.md`.
 
 ## Honest scope
 This blocks all ordinary typing/clicking/scrolling and most chord shortcuts. It **cannot**

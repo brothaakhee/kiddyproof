@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import IOKit.pwr_mgt
+import KiddyproofCore
 
 final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let suppressor = InputSuppressor()
@@ -9,6 +10,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let watchdog = WatchdogClient()
     private let state = KidModeState.shared
     private lazy var healthMonitor = TapHealthMonitor(suppressor: suppressor)
+
+    private let onboarding = OnboardingController()
 
     private var statusItem: NSStatusItem?
     private var securedPoll: Timer?
@@ -24,11 +27,23 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // no Dock icon; required for tapCreate to work
 
+        let uncleanExit = CrashSentinel.begin()
+
         settings.pushToState()   // seed the shared snapshot before anything reads it
+        UpdaterSupport.startIfPackaged()   // before the menu is built (adds its item)
         setupStatusItem()
         applyIsolationOverride()
 
-        if !Permissions.isAccessibilityTrusted() {
+        if uncleanExit && ProcessInfo.processInfo.environment["KP_DEMO"] == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { CrashSentinel.offerReport() }
+        }
+
+        // First launch: the guided flow owns the permission story (welcome → grant →
+        // honest limits → how to exit). Later launches without the grant fall back to
+        // the direct system prompt.
+        if onboarding.shouldShowOnLaunch {
+            onboarding.show()
+        } else if !Permissions.isAccessibilityTrusted() {
             NSLog("[kiddyproof] Accessibility NOT granted — prompting.")
             Permissions.promptForAccessibility()
             Permissions.openAccessibilitySettings()
@@ -165,6 +180,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         status.isEnabled = false
         menu.addItem(status)
         menu.addItem(NSMenuItem(title: "Open Accessibility Settings…", action: #selector(openSettings), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Welcome & Safety Guide…", action: #selector(showOnboarding), keyEquivalent: ""))
+        if UpdaterSupport.isAvailable {
+            menu.addItem(NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: ""))
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         for i in menu.items { i.target = self }
@@ -178,9 +197,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func menuEnter() { armKidMode() }
     @objc private func openSettings() { Permissions.openAccessibilitySettings() }
+    @objc private func showOnboarding() { onboarding.show() }
+    @objc private func checkForUpdates() { UpdaterSupport.checkForUpdates() }
     @objc private func quit() { settings.flush(); disarmKidMode(reason: "quit"); NSApp.terminate(nil) }
 
-    func applicationWillTerminate(_ notification: Notification) { settings.flush() }
+    func applicationWillTerminate(_ notification: Notification) {
+        settings.flush()
+        CrashSentinel.endCleanly()
+    }
 
     // MARK: - Settings submenu (rebuilt each time it opens, so it always reflects state)
 

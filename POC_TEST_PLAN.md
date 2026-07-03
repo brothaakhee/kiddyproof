@@ -17,12 +17,26 @@ First run will prompt for **Accessibility** (System Settings ▸ Privacy & Secur
 Accessibility). Grant it, then **relaunch** — TCC grants for the suppressing tap usually
 need a relaunch to take effect.
 
-## Automated results (already run)
-- ✅ `swift build` — both targets (`kiddyproof`, `kiddywatchdog`) compile & link clean.
-- ✅ Watchdog **heartbeat-loss kill**: victim goes silent → SIGKILLed in ~3s.
-- ✅ Watchdog **max-duration auto-exit**: deadline reached → SIGKILLed in ~1.2s.
+## Automated results (already run; last updated 2026-07-03)
+- ✅ `swift build` — all targets (`kiddyproof`, `kiddywatchdog`, `KiddyproofCore`) compile clean.
+- ✅ `swift test` — 21 unit tests pass: settings clamping/codable, watchdog protocol +
+  enforcement verdicts (heartbeat loss, deadline, disarm, re-arm), exit-gesture hold
+  timing incl. a 60s deterministic random-mash simulation that never fires.
+- ✅ Watchdog **heartbeat-loss kill**: victim goes silent → SIGKILLed in ~3s (live drill).
+- ✅ Watchdog **max-duration auto-exit**: deadline reached → SIGKILLed in ~1.2s (live drill).
+  Note: the max-duration SIGKILL is now the *backstop*; an in-app timer ends ordinary
+  sessions cleanly 10s before the watchdog deadline.
 - ✅ Watchdog **clean disarm**: after `DISARM`, silence does NOT kill.
 - ✅ App boots, launches watchdog, installs the tap in idle/pass-through.
+- ✅ Full KP_DEMO cycle with the hardened safety core: arm (health-gated, watchdog-gated,
+  kiosk flags + sleep assertion), effects run, clean in-app exit, watchdog DISARM + EOF
+  shutdown.
+- ✅ **Secure-input hard-refuse observed live**: with Secure Keyboard Entry active
+  system-wide, the app refused to arm (drill E1's first half) — verified 2026-07-03.
+- ✅ `Scripts/package.sh` — release build → `dist/kiddyproof.app` (Info.plist lints,
+  Sparkle.framework embedded, watchdog beside the main binary, ad-hoc + hardened-runtime
+  signed) → `dist/kiddyproof-0.1.0.dmg`. Developer-ID signing + notarization take
+  `SIGN_IDENTITY` / `NOTARY_PROFILE` env vars (see script header).
 
 ## Interactive checklist (🖐️ run these at the machine)
 

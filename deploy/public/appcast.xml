@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sparkle update feed. Empty until the first public release: add an <item> per
+     release using the enclosure attributes printed by Scripts/package.sh
+     (sign_update's EdDSA signature + length). -->
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>kiddyproof updates</title>
+    <link>https://kiddyproof.app/appcast.xml</link>
+    <description>Release feed for the kiddyproof macOS app.</description>
+    <language>en</language>
+  </channel>
+</rss>

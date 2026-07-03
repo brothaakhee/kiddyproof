@@ -1,4 +1,5 @@
 import AppKit
+import KiddyproofCore
 
 // Shared mutable state touched by the tap thread (writer of input) and the render
 // thread (reader/drainer). All access goes through a single NSLock via update/read,

@@ -126,3 +126,34 @@ Parent-facing SwiftUI flow: requests Accessibility via AXIsProcessTrustedWithOpt
 10. 9. Watchdog: implement Watchdog helper + heartbeat; kill -STOP the main app (simulate livelock) and confirm the watchdog SIGKILLs it and input is restored within ~1s. Also test the max-duration auto-exit.
 11. 10. Secure-input + revocation drills: focus a Terminal with Secure Keyboard Entry → confirm SecureInputGuard hard-refuses/bails loudly; revoke Accessibility mid-session → confirm the watchdog restores input (document if a hardware reboot is ever needed). Record all residuals in POC_TEST_PLAN.md.
 12. 11. Sign + notarize: Developer ID + Hardened Runtime + notarytool + staple a DMG; relaunch via Finder (NOT Xcode) to surface the Launch-Services silent-disable race; confirm the health gate catches it.
+## Implementation amendments (recorded 2026-07-03)
+
+Deliberate deviations from the design above, so this document keeps describing the
+real system:
+
+- **Rendering is CoreGraphics on a 60 Hz main-loop timer, not Metal/CADisplayLink.**
+  CADisplayLink↔CATransaction flush coupling saturated the GPU on the dev machine; the
+  CPU path proved reliable. Metal remains the intended path if profiling demands it.
+  `ProcessInfo.thermalState` downgrade is still TODO with the Metal work.
+- **Watchdog transport is a stdin line protocol, not XPC + NOTE_EXIT.** Functionally
+  equivalent (EOF = parent death), far simpler. The protocol and enforcement state
+  machine live in `KiddyproofCore.WatchdogCore` and are unit-tested. Liveness is
+  bidirectional: pings require render progress AND fresh tap heartbeat; the parent
+  detects watchdog death via terminationHandler (its pipe read-end is closed so writes
+  fail loudly) and disarms.
+- **TapHealthMonitor is a component of its own**: 1 Hz synthetic-probe verification
+  while armed with re-enable → recreate → fail-loud-disarm escalation. Additionally the
+  overlay views act as a leak tripwire: any AppKit-delivered input event while armed is
+  proof the tap is dead and tears kid mode down.
+- **Sleep/lock/fast-user-switch end the session cleanly** (rather than recreating the
+  tap on wake): simpler contract, and it removes the wake-time spurious-SIGKILL race.
+- **The whitelisted-Force-Quit-chord idea was dropped** (everything is swallowed); the
+  parent's guaranteed exits are the corner-hold, the chord, the session timer, and the
+  watchdog.
+- **Settings UI is a status-item menu, not a SwiftUI panel** — adequate for the current
+  surface; revisit if settings grow.
+- **Scope additions beyond this doc**: 10 effect scenes behind a Director with
+  crossfades, procedural audio (KidAudio: synthesized at boot, peak-limited, engine
+  paused between sessions), scene orb / shuffle, onboarding flow with the mandated
+  parent disclosure, Sparkle updates (packaged builds only), no-cloud crash sentinel,
+  packaging pipeline (`Scripts/package.sh`).

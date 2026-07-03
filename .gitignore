@@ -2,3 +2,5 @@
 *.xcodeproj
 .DS_Store
 screenshots/
+dist/
+fonts/.tmp*

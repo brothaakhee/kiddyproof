@@ -17,9 +17,13 @@ final class ExitGestureController {
     private let state = KidModeState.shared
 
     private var cornerRect: NSRect {
-        // Bottom-left 120x120 of whichever screen owns that origin (main screen here).
-        guard let s = NSScreen.screens.first else { return .zero }
-        return NSRect(x: s.frame.minX, y: s.frame.minY, width: 120, height: 120)
+        // Bottom-left 120x120 of the PRIMARY screen (origin 0,0) — the same screen the
+        // overlay draws the exit ring and hint on, so the UI always points at the real
+        // exit zone even in multi-display arrangements. Recomputed every tick, so a
+        // display change mid-session is picked up automatically.
+        let s = NSScreen.screens.first { $0.frame.origin == .zero } ?? NSScreen.screens.first
+        guard let screen = s else { return .zero }
+        return NSRect(x: screen.frame.minX, y: screen.frame.minY, width: 120, height: 120)
     }
 
     func start() {

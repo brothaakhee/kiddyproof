@@ -25,6 +25,14 @@ final class KidAudio {
                                     channels: 2, interleaved: false)!
     private let wetMixer = AVAudioMixerNode()
     private let reverb = AVAudioUnitReverb()
+    // Peak limiter between the main mixer and the device: 16 voices + beds + booms can
+    // sum past 0 dBFS under a sustained multi-channel mash, and digital clipping is
+    // exactly the harsh sound this product must never make — into toddler ears.
+    private let limiter = AVAudioUnitEffect(audioComponentDescription: AudioComponentDescription(
+        componentType: kAudioUnitType_Effect,
+        componentSubType: kAudioUnitSubType_PeakLimiter,
+        componentManufacturer: kAudioUnitManufacturer_Apple,
+        componentFlags: 0, componentFlagsMask: 0))
     private let drone = AVAudioPlayerNode()      // ambient bed (constant, dry)
     private let vacuum = AVAudioPlayerNode()     // low hum, swelled by the scene
     private let voiceCount = 16
@@ -38,21 +46,30 @@ final class KidAudio {
     private var lastPlay: [Int: TimeInterval] = [:]
     private var configToken: NSObjectProtocol?
     private var booted = false
+    private var primed = false        // players/beds started (first enable)
+    private var needsReprime = false  // device config changed while paused
     private var vacLevel: Float = 0
     private let bedLevel: Float = 0.14
 
     // MARK: Boot
 
+    // Builds the graph and synthesizes all buffers ONCE — but does NOT start the
+    // engine. A running AVAudioEngine holds the output device and burns CPU 24/7;
+    // the engine only runs while kid mode is armed (setEnabled), and arming stays
+    // cheap because everything here is already prepared.
     func boot() {
         guard !booted else { return }
         booted = true
         reverb.loadFactoryPreset(.largeHall)
         reverb.wetDryMix = 30
-        engine.attach(wetMixer); engine.attach(reverb); engine.attach(drone); engine.attach(vacuum)
+        engine.attach(wetMixer); engine.attach(reverb); engine.attach(drone)
+        engine.attach(vacuum); engine.attach(limiter)
         engine.connect(wetMixer, to: reverb, format: fmt)
         engine.connect(reverb, to: engine.mainMixerNode, format: fmt)
         engine.connect(drone, to: engine.mainMixerNode, format: fmt)   // bed stays dry & clean
         engine.connect(vacuum, to: wetMixer, format: fmt)
+        engine.connect(engine.mainMixerNode, to: limiter, format: fmt) // everything passes the
+        engine.connect(limiter, to: engine.outputNode, format: fmt)    // limiter before the device
         for _ in 0..<voiceCount {
             let node = AVAudioPlayerNode()
             engine.attach(node)
@@ -60,13 +77,11 @@ final class KidAudio {
             voices.append(node); lastUsed.append(0)
         }
         synthesize()
-        engine.mainMixerNode.outputVolume = 0   // silent until kid mode arms; the bed loops play muted
+        engine.mainMixerNode.outputVolume = 0   // volume set on enable
         configToken = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in self?.reprime() }
-        startEngine()
-        startBeds()
-        for v in voices { v.play() }
+        engine.prepare()
     }
 
     private func startEngine() {
@@ -84,6 +99,9 @@ final class KidAudio {
     }
 
     private func reprime() {
+        // Output device changed. If we're paused, just remember to rebuild playback on
+        // the next enable — never wake the engine while kid mode is off.
+        guard enabled else { needsReprime = true; return }
         for v in voices { v.stop() }
         drone.stop(); vacuum.stop()
         startEngine()
@@ -96,7 +114,19 @@ final class KidAudio {
     func setEnabled(_ on: Bool) {
         enabled = on
         engine.mainMixerNode.outputVolume = on ? volume : 0   // mutes everything incl. beds
-        if on { startEngine() }
+        if on {
+            startEngine()
+            if !primed || needsReprime {
+                needsReprime = false
+                for v in voices { v.stop() }
+                drone.stop(); vacuum.stop()
+                for v in voices where engine.isRunning { v.play() }
+                startBeds()
+                primed = true
+            }
+        } else if engine.isRunning {
+            engine.pause()   // release the CPU + output device between sessions
+        }
     }
     func setVolume(_ v: Float) {
         volume = max(0, min(1, v))

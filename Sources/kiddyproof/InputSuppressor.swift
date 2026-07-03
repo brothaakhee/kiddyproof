@@ -37,8 +37,26 @@ final class InputSuppressor {
 
     private func threadMain() {
         self.runLoop = CFRunLoopGetCurrent()
+        if !installTap() {
+            // Almost always means Accessibility is not granted, the app is sandboxed,
+            // or the activation policy is wrong. Keep the run loop alive anyway so a
+            // later recreate() attempt (e.g. after the parent grants permission) has a
+            // thread to land on.
+            NSLog("[kiddyproof] tapCreate FAILED — Accessibility not granted?")
+        }
+        // A run loop with no sources exits immediately; park a far-future timer so the
+        // thread stays serviceable for recreate() even if the tap failed to install.
+        let keepAlive = CFRunLoopTimerCreateWithHandler(
+            kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + 3.15e9, 0, 0, 0) { _ in }
+        CFRunLoopAddTimer(CFRunLoopGetCurrent(), keepAlive, .commonModes)
+        CFRunLoopRun()
+    }
 
-        // Everything a toddler can hit with keyboard/trackpad/mouse/scroll.
+    // Creates + enables the tap on the current (tap) thread. Returns success.
+    @discardableResult
+    private func installTap() -> Bool {
+        // Everything a toddler can hit with keyboard/trackpad/mouse/scroll, plus
+        // NX_SYSDEFINED (bit 14) so media/volume/brightness keys are swallowed too.
         let types: [CGEventType] = [
             .keyDown, .keyUp, .flagsChanged,
             .leftMouseDown, .leftMouseUp, .leftMouseDragged,
@@ -48,6 +66,7 @@ final class InputSuppressor {
         ]
         var mask: CGEventMask = 0
         for t in types { mask |= (1 << CGEventMask(t.rawValue)) }
+        mask |= (1 << 14) // NX_SYSDEFINED: media/special keys arrive here, not as keyDown
 
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
 
@@ -58,12 +77,7 @@ final class InputSuppressor {
             eventsOfInterest: mask,
             callback: tapCallback,
             userInfo: selfPtr
-        ) else {
-            // Almost always means Accessibility is not granted, the app is sandboxed,
-            // or the activation policy is wrong.
-            NSLog("[kiddyproof] tapCreate FAILED — Accessibility not granted? Aborting tap thread.")
-            return
-        }
+        ) else { return false }
         self.tap = tap
 
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
@@ -71,7 +85,7 @@ final class InputSuppressor {
         CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         NSLog("[kiddyproof] event tap installed and enabled (idle/pass-through).")
-        CFRunLoopRun()
+        return true
     }
 
     func reEnableIfNeeded() {
@@ -80,6 +94,40 @@ final class InputSuppressor {
             NSLog("[kiddyproof] tap was disabled — re-enabling.")
             CGEvent.tapEnable(tap: tap, enable: true)
         }
+    }
+
+    var isTapEnabled: Bool {
+        guard let tap = tap else { return false }
+        return CGEvent.tapIsEnabled(tap: tap)
+    }
+
+    // Last-resort recovery for a dead-but-installed tap (TCC desync, Launch Services
+    // race, post-wake wedge): tear the tap down and build a fresh one, on the tap
+    // thread so it never races the callback. Completion fires on the main queue.
+    func recreate(completion: @escaping (Bool) -> Void) {
+        guard let rl = runLoop else {
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+        CFRunLoopPerformBlock(rl, CFRunLoopMode.commonModes.rawValue) { [weak self] in
+            guard let self = self else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+            if let source = self.runLoopSource {
+                CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+                self.runLoopSource = nil
+            }
+            if let old = self.tap {
+                CGEvent.tapEnable(tap: old, enable: false)
+                CFMachPortInvalidate(old)
+                self.tap = nil
+            }
+            let ok = self.installTap()
+            NSLog("[kiddyproof] tap recreate → \(ok ? "OK" : "FAILED")")
+            DispatchQueue.main.async { completion(ok) }
+        }
+        CFRunLoopWakeUp(rl)
     }
 
     private enum Action { case pass, swallow, enter }

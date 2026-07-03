@@ -42,16 +42,28 @@ final class PhysicsScene: Scene {
 
     func reset() {
         bodies.removeAll(keepingCapacity: true)
+        grid.removeAll(keepingCapacity: true)
         letterCount = 0; ballCount = 0; accumulator = 0; draining = false
+    }
+
+    // At the caps the world RECYCLES (oldest body of that kind vanishes to make room)
+    // instead of going dead: a mashing toddler fills the letter cap in seconds, and a
+    // scene that stops responding — no visual, no sound — reads as broken.
+    private func recycleOldest(letter: Bool) {
+        if let i = bodies.firstIndex(where: { ($0.ch != nil) == letter }) {
+            bodies.remove(at: i)
+            if letter { letterCount -= 1 } else { ballCount -= 1 }
+        }
     }
 
     func handle(_ event: InputEvent, _ ctx: EffectContext) {
         guard !draining else { return }
         switch event.kind {
         case .key(let s):
-            guard letterCount < letterCap, bodies.count < maxBodies else { return }
             let ch = s.first ?? "?"
             guard !ch.isWhitespace else { return }
+            if letterCount >= letterCap || bodies.count >= maxBodies { recycleOldest(letter: true) }
+            guard letterCount < letterCap, bodies.count < maxBodies else { return }
             bodies.append(Body(pos: NSPoint(x: ctx.cursor.x + rng.range(-30, 30), y: ctx.bounds.maxY - 40),
                                vel: NSPoint(x: rng.range(-40, 40), y: rng.range(-60, 0)),
                                radius: 26, invMass: 1.0 / 1.4, restitution: 0.15,
@@ -61,7 +73,9 @@ final class PhysicsScene: Scene {
             letterCount += 1
             ctx.audio?.note(for: s, intensity: ctx.intensity)
         case .click(let pt, let button):
-            guard button == .left, ballCount < ballCap, bodies.count < maxBodies else { return }
+            guard button == .left else { return }
+            if ballCount >= ballCap || bodies.count >= maxBodies { recycleOldest(letter: false) }
+            guard ballCount < ballCap, bodies.count < maxBodies else { return }
             let r = rng.range(18, 30)
             bodies.append(Body(pos: pt, vel: NSPoint(x: rng.range(-260, 260), y: rng.range(-100, 320)),
                                radius: r, invMass: 1.0 / Double(r * 0.12), restitution: 0.72,
@@ -130,7 +144,10 @@ final class PhysicsScene: Scene {
     private func collide() {
         guard bodies.count > 1 else { return }
         let cell: CGFloat = 110
-        for k in grid.keys { grid[k] = [] }
+        // Shed stale cells instead of keeping every key ever visited alive (and
+        // rewriting each with a fresh empty array) — thousands of dictionary writes
+        // per frame otherwise.
+        grid.removeAll(keepingCapacity: true)
         @inline(__always) func key(_ p: NSPoint) -> Int {
             let cx = Int(floor(p.x / cell)), cy = Int(floor(p.y / cell))
             return cx &* 73856093 ^ cy &* 19349663

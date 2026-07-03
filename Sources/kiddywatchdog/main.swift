@@ -41,6 +41,12 @@ func log(_ msg: String) {
 }
 
 func killMain(reason: String) {
+    // PID-reuse guard: if the main app already died we get reparented (getppid()
+    // changes), so never SIGKILL an innocent recycled pid.
+    guard getppid() == parentPID else {
+        log("main process already gone (reparented); not killing pid \(parentPID).")
+        exit(0)
+    }
     log("KILLING main pid \(parentPID): \(reason). Input will be restored as the tap dies with the process.")
     kill(parentPID, SIGKILL)
     exit(0)

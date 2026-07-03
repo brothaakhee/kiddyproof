@@ -7,7 +7,7 @@ import AppKit
 // stars use the shared contrast sprite. No veil — the parent's real screen stays visible.
 final class CalmConstellationScene: Scene {
     let name = "Constellation"
-    let category = SceneCategory.archived
+    let category = SceneCategory.calm
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

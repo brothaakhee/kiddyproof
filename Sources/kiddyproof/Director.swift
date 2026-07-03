@@ -16,10 +16,19 @@ final class Director {
     // by default; energetic scenes are opt-in.
     var allowedCategories: Set<SceneCategory> = [.calm]
 
+    // Progress of the running crossfade (0…1), updated once per frame in update().
+    private var fadeProgress: CGFloat = 1
+
     var activeName: String { incoming?.name ?? current.name }
     var skin: CursorSkin { incoming?.skin ?? current.skin }
     var reactivity: Reactivity { (incoming ?? current).reactivity }
-    var veil: CGFloat { (incoming ?? current).veil }
+    // The veil LERPS across the crossfade — a one-frame jump between scenes with
+    // different veils reads as a full-screen flash, the exact artifact the calm bar
+    // forbids.
+    var veil: CGFloat {
+        guard let inc = incoming else { return current.veil }
+        return current.veil + (inc.veil - current.veil) * fadeProgress
+    }
     var audioSwell: CGFloat { (incoming ?? current).audioSwell }
     var sceneNames: [String] { scenes.map { $0.name } }                              // all (incl. archived) — for KP_SCENE
     var pickableNames: [String] { scenes.filter { $0.category != .archived }.map { $0.name } }  // parent-selectable
@@ -29,6 +38,7 @@ final class Director {
         guard incoming == nil, let i = scenes.firstIndex(where: { $0.name == name }) else { return }
         index = i
         current = scenes[i]
+        current.draining = false   // never trust a stale drain flag from a previous session
     }
 
     init(scenes: [Scene]) {
@@ -62,6 +72,8 @@ final class Director {
         incoming = next
         index = nextIndex
         transitionStart = now
+        fadeProgress = 0   // requestNext can land after update() this frame; never let a
+                           // stale progress snap the veil for one frame
     }
 
     // Route a discrete input event to whichever scene is accepting input.
@@ -76,11 +88,13 @@ final class Director {
             // a single scene's budget during the 0.6s crossfade instead of doubling it.
             inc.update(ctx)
             let p = CGFloat((ctx.now - transitionStart) / duration)
+            fadeProgress = smoothstep(p)
             if p >= 1 {
                 current.reset()
                 current = inc
                 current.draining = false
                 incoming = nil
+                fadeProgress = 1
             }
         } else {
             current.update(ctx)
@@ -89,12 +103,22 @@ final class Director {
 
     func draw(into ctx: CGContext, bounds: CGRect, origin: CGPoint, now: TimeInterval) {
         if let inc = incoming {
+            // Each scene is composited through a TRANSPARENCY LAYER so the crossfade
+            // alpha multiplies the whole scene as a group. A bare setAlpha would be
+            // stomped by the scenes' own internal setAlpha calls, making every
+            // transition a hard double-brightness pop instead of a fade.
             let p = smoothstep(CGFloat((now - transitionStart) / duration))
-            ctx.saveGState(); ctx.setAlpha(1 - p)
-            current.draw(into: ctx, bounds: bounds, origin: origin)
-            ctx.restoreGState()
+            if p < 0.999 {
+                ctx.saveGState(); ctx.setAlpha(1 - p)
+                ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+                current.draw(into: ctx, bounds: bounds, origin: origin)
+                ctx.endTransparencyLayer()
+                ctx.restoreGState()
+            }
             ctx.saveGState(); ctx.setAlpha(p)
+            ctx.beginTransparencyLayer(auxiliaryInfo: nil)
             inc.draw(into: ctx, bounds: bounds, origin: origin)
+            ctx.endTransparencyLayer()
             ctx.restoreGState()
         } else {
             current.draw(into: ctx, bounds: bounds, origin: origin)

@@ -37,6 +37,14 @@ enum CursorController {
         hidden = false
     }
 
+    // Display reconfiguration can re-couple the pointer. Re-assert the decoupling
+    // WITHOUT another hide (CGDisplayHideCursor is refcounted per process; a second
+    // hide would need a second show and break the balanced restore).
+    static func reassert() {
+        guard hidden else { return }
+        CGAssociateMouseAndMouseCursorPosition(0)
+    }
+
     private static var installedHandlers = false
     private static func installCrashSafeRestore() {
         guard !installedHandlers else { return }

@@ -6,7 +6,7 @@ import AppKit
 // sparkle. Threads use the contrast stroke so the web reads on any wallpaper.
 final class CalmSpiderwebScene: Scene {
     let name = "Spiderweb"
-    let category = SceneCategory.archived
+    let category = SceneCategory.calm
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

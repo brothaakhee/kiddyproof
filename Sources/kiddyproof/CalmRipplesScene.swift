@@ -6,7 +6,7 @@ import AppKit
 // stroke so they read on light AND dark wallpaper. No veil.
 final class CalmRipplesScene: Scene {
     let name = "Ripples"
-    let category = SceneCategory.archived
+    let category = SceneCategory.calm
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0
@@ -28,7 +28,10 @@ final class CalmRipplesScene: Scene {
     // Contrast dabs so the bleeding rings read on light AND dark wallpaper.
     private static let stamps: [CGImage] = palette.map { softContrastSprite($0) }
 
-    func reset() { ripples.removeAll(keepingCapacity: true); ambientAccum = 0 }
+    func reset() {
+        ripples.removeAll(keepingCapacity: true); ambientAccum = 0
+        draining = false; lastWake = .zero   // a stale drain flag would leave the scene input-dead
+    }
 
     private func drop(_ center: NSPoint, _ now: TimeInterval, life: Double, maxR: CGFloat, width: CGFloat, concentric: Bool) {
         guard ripples.count < maxRipples else { return }

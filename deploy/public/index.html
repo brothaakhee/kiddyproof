@@ -6,6 +6,20 @@
 <title>kiddyproof — hand over the keyboard, keep your work</title>
 <meta name="description" content="A native macOS app that turns your child's typing and clicking into calm, glowing light — while your real desktop stays untouched. One shortcut in, one parent gesture out." />
 
+<link rel="canonical" href="https://kiddyproof.app/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="kiddyproof" />
+<meta property="og:title" content="kiddyproof — hand over the keyboard, keep your work" />
+<meta property="og:description" content="A native macOS app that turns your child's typing and clicking into calm, glowing light — while your real desktop stays untouched. One shortcut in, one parent gesture out." />
+<meta property="og:url" content="https://kiddyproof.app/" />
+<meta property="og:image" content="https://kiddyproof.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="kiddyproof — hand over the keyboard, keep your work" />
+<meta name="twitter:description" content="A native macOS app that turns your child's typing and clicking into calm, glowing light — while your real desktop stays untouched. One shortcut in, one parent gesture out." />
+<meta name="twitter:image" content="https://kiddyproof.app/og.png" />
+
 <link rel="icon" href="/favicon.ico" sizes="48x48" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
@@ -14,16 +28,46 @@
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#0a0c18" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
 <style>
 /* ============================================================
    kiddyproof — landing page
    Aesthetic: calm night, soft glow. Apple-grade restraint with
    a warm pastel luminance lifted straight from the app's palette.
    ============================================================ */
+
+/* Self-hosted fonts (variable woff2, latin + latin-ext) — no external requests. */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/hanken-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/hanken-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
   /* night */
@@ -216,8 +260,6 @@ nav.scrolled {
 }
 .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); }
 .btn-sm { padding: 9px 18px; font-size: 14px; }
-.btn-soon { cursor: default; }
-.btn-soon:hover { transform: none; box-shadow: 0 8px 30px rgba(255, 168, 92, 0.28), inset 0 1px 0 rgba(255,255,255,0.45); }
 
 /* keyboard focus: a calm cyan ring on interactive controls (mouse clicks stay clean) */
 a:focus-visible, .btn:focus-visible, button:focus-visible {
@@ -647,7 +689,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#how">How it works</a>
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
-      <a href="#download" class="btn btn-primary btn-sm nav-cta">Coming soon</a>
+      <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary btn-sm nav-cta">Get early access</a>
     </div>
   </div>
 </nav>
@@ -663,9 +705,9 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       your little one can play with. Your real desktop stays right there, untouched.
     </p>
     <div class="hero-actions reveal-hero d4">
-      <a href="#download" class="btn btn-primary">
+      <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
-        Coming soon
+        Get early access
       </a>
       <a href="#demo-stage" class="btn btn-ghost">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
@@ -674,9 +716,9 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     </div>
     <div class="hero-note reveal-hero d5">
       <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Your files never touched</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Only a parent gesture exits</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Exit is a deliberate 3-second parent gesture</span>
       <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> No account, no cloud</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Signed &amp; notarized by Apple</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Developer-ID signed &amp; Apple-notarized</span>
     </div>
 
     <!-- ===== DEMO WINDOW (the main attraction) ===== -->
@@ -696,7 +738,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
         </div>
       </div>
       <p class="demo-caption">
-        <b>This is the real effect engine</b>, running live in your browser — drifting fireflies, blooms on
+        <b>A faithful re-creation of the Drift scene</b>, running live in your browser — drifting fireflies, blooms on
         every tap, a cursor that gently gathers the light. The Mac behind it never feels a thing.
       </p>
     </div>
@@ -725,7 +767,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <div class="step reveal s3" style="--c: rgba(255,204,223,0.22)">
         <span class="num">3</span>
         <h3>Play becomes light</h3>
-        <p>Your child mashes away and the screen answers in calm, glowing motion. To leave, you hold the ⌃⌥⌘ keys — or press &amp; hold the bottom-left corner — for three seconds. They can't.</p>
+        <p>Your child mashes away and the screen answers in calm, glowing motion. To leave, you hold the ⌃⌥⌘ keys — or press &amp; hold the bottom-left corner — for three seconds. Random mashing can't reproduce a deliberate three-second hold.</p>
       </div>
     </div>
   </div>
@@ -764,11 +806,11 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
           </li>
           <li>
             <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7z"/></svg></span>
-            <div><h3>Protective, not punishing</h3><p>No scary lock screen. Just a soft, beautiful world where nothing they touch can break, close, or send a thing.</p></div>
+            <div><h3>Protective, not punishing</h3><p>No scary lock screen. Just a soft, beautiful world where ordinary typing, clicking, and scrolling can't reach your apps, files, or messages.</p></div>
           </li>
           <li>
             <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
-            <div><h3>Quietly serious underneath</h3><p>The cuteness is skin-deep. Beneath it is a hardened input tap and a watchdog that always restores control.</p></div>
+            <div><h3>Quietly serious underneath</h3><p>The cuteness is skin-deep. Beneath it is a system-level input tap and an independent watchdog built to hand control back to you.</p></div>
           </li>
         </ul>
       </div>
@@ -790,7 +832,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <span class="kicker">The serious part</span>
       <h2>Engineered like it matters. <em>Because it does.</em></h2>
       <p>The blocking isn't a flimsy overlay you can click through. It's a system-level event tap,
-         designed against every way it could fail — and hardened long before it ever guarded a screen.</p>
+         designed against every way it could fail — and built to be hardened long before it ever guards a screen.</p>
     </div>
     <div class="trust">
       <div class="tcard reveal s1">
@@ -810,19 +852,29 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       </div>
       <div class="tcard reveal s4">
         <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2v6M12 22v-6"/><circle cx="12" cy="12" r="4"/><path d="M4 12H2M22 12h-2"/></svg>
-        <h3>A watchdog that never sleeps</h3>
-        <p>A separate, tap-free process monitors a heartbeat. If anything ever hangs — or the Mac sleeps — it restores your control instantly.</p>
+        <h3>An independent watchdog</h3>
+        <p>A separate, tap-free process monitors a heartbeat. If anything hangs — even the app itself — it restores your control within seconds.</p>
       </div>
     </div>
 
     <!-- honest scoping: the section a careful parent looks for -->
     <div class="goodtoknow reveal s2">
-      <h3>Good to know — the honest boundaries</h3>
+      <h3>Good to know — exactly where the edges are</h3>
+      <p style="margin:0 0 14px; color:var(--ink-mute); font-size:0.95rem; line-height:1.55">kiddyproof blocks ordinary typing, clicking, and scrolling very well. A few escapes sit below
+         what any Mac app can intercept — we tell you exactly where the edges are, because you should never have to guess.</p>
       <ul>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
           <span><b>It stays quiet.</b> Effects come with soft, sparse sound — never percussive or jarring — and a single setting mutes audio entirely if you'd rather hand over a silent screen.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>Some things stay yours by design.</b> The hardware power button and macOS-reserved escapes (like Force Quit) are intentionally out of reach of any app — a deliberate way out, not a flaw. Everything else is caught.</span></li>
+          <span><b>Hardware buttons can't be caught.</b> The power / Touch&nbsp;ID button works at the hardware level — a press can sleep or lock the Mac (your documents stay safe, but kid mode ends).</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>A few macOS-reserved shortcuts can slip through.</b> Force Quit (⌘⌥⎋) and accessibility shortcuts (like VoiceOver's ⌘F5) are handled below where an app can reliably block them — a determined mash could trigger one.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>Big trackpad swipes reach macOS directly.</b> Three- and four-finger Mission&nbsp;Control and Spaces gestures come from the trackpad hardware — a flat toddler hand on the trackpad can switch Spaces or open Mission&nbsp;Control.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>The lid and the lock keep their jobs.</b> Closing the lid, or an idle auto-lock timer, still sleeps or locks the Mac like always — kiddyproof keeps the display awake while armed, but it can't (and shouldn't) override the lid.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>Over another app's native-fullscreen video or game, the visuals step back.</b> Input is still blocked, but the glowing cage can't paint over foreign fullscreen content — you'll see the video, not the fireflies.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
           <span><b>It won't run when it can't be safe.</b> If macOS Secure Input is active (a password field, FileVault), kiddyproof refuses to arm rather than pretend — so you're never falsely reassured.</span></li>
       </ul>
@@ -836,15 +888,15 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     <div class="cta-card reveal">
       <svg class="minicat" aria-hidden="true"><use href="#cat"/></svg>
       <h2>Let them play.<br/><em>Get back to work.</em></h2>
-      <p>Free at launch. Developer-ID signed and notarized for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
+      <p>Free while in early access. Built to ship Developer-ID signed and notarized for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
       <div class="hero-actions">
-        <span class="btn btn-primary btn-soon" aria-disabled="true">
+        <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
-          Coming soon
-        </span>
+          Get early access
+        </a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
-      <small>Launching soon for macOS · Developer-ID signed &amp; notarized</small>
+      <small>Early access for macOS · no account, no cloud</small>
     </div>
   </div>
 </section>
@@ -860,7 +912,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#how">How it works</a>
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
-      <a href="#download">Download</a>
+      <a href="#download">Early access</a>
     </div>
     <span class="copy">© 2026 kiddyproof · made for parents, watched by a cat</span>
   </div>

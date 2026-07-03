@@ -6,6 +6,12 @@ import QuartzCore
 // CADisplayLink (on the primary view) drives simulation once per frame; every
 // EffectsView then just draws the already-stepped state for its screen.
 final class OverlayWindowManager: NSObject {
+    // Fired (once per session, on main) if a real input event reaches an overlay view
+    // through the normal AppKit path — impossible while the suppressing tap is healthy,
+    // so it is treated as proof of a live input leak.
+    var onLeakDetected: (() -> Void)?
+    private var leakReported = false
+
     private var panels: [NSPanel] = []
     private var views: [EffectsView] = []
     private var renderTimer: Timer?
@@ -29,10 +35,8 @@ final class OverlayWindowManager: NSObject {
     private let mash = MashMeter()
     private let cursorFX = CursorEffect()
     private let orb = SceneOrb()
-    // Calm scenes first (the default world); energetic scenes are opt-in.
-    // All scenes are registered so any can be previewed via KP_SCENE, but the scrapped
-    // drafts are `.archived` so the kid's orb/shuffle never cycles to them — only Black Hole
-    // (calm) and, if enabled, the energetic two are in the actual rotation.
+    // Calm scenes are the default world (Black Hole first — the flagship & default);
+    // the two energetic scenes are opt-in via settings and never cycle otherwise.
     private lazy var director = Director(scenes: [
         CalmBlackholeScene(), FireworksScene(), PhysicsScene(),
         CalmDriftScene(), CalmConstellationScene(), CalmRipplesScene(), CalmPetalsScene(),
@@ -61,6 +65,8 @@ final class OverlayWindowManager: NSObject {
     }
 
     func show() {
+        guard renderTimer == nil else { return }   // idempotent: a double-arm must never
+        leakReported = false                       // stack panels or double-step the sim
         // One simulation spanning ALL monitors (matches the cursor's clamp bounds): each
         // screen's panel is a window into this shared global-coordinate sim, so the effect
         // is seamless across displays and the cursor's hole follows it onto any monitor.
@@ -80,24 +86,7 @@ final class OverlayWindowManager: NSObject {
         shakeReversals = 0; lastShakeVX = 0; lastShuffle = 0
         orb.onCycle = { [weak self] in self?.director.requestNext(now: CACurrentMediaTime()) }
 
-        for screen in NSScreen.screens {
-            let panel = NSPanel(contentRect: screen.frame,
-                                styleMask: [.borderless, .nonactivatingPanel],
-                                backing: .buffered, defer: false)
-            panel.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
-            panel.isOpaque = false
-            panel.backgroundColor = .clear
-            panel.hasShadow = false
-            panel.ignoresMouseEvents = false
-            panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-            panel.setFrame(screen.frame, display: true)
-            let view = EffectsView(frame: NSRect(origin: .zero, size: screen.frame.size))
-            view.manager = self
-            view.screenOrigin = screen.frame.origin
-            panel.contentView = view
-            panel.orderFrontRegardless()
-            panels.append(panel); views.append(view)
-        }
+        for screen in NSScreen.screens { addPanel(for: screen) }
 
         armTime = CACurrentMediaTime(); hintAlpha = 1   // show the exit hint on entry, then fade
 
@@ -110,10 +99,67 @@ final class OverlayWindowManager: NSObject {
     }
 
     func hide() {
-        audio.setEnabled(false)        // silence the ambient bed + hum when kid mode ends
+        audio.setEnabled(false)        // silence AND pause the whole engine when kid mode ends
         renderTimer?.invalidate(); renderTimer = nil
         for p in panels { p.orderOut(nil) }
         panels.removeAll(); views.removeAll()
+    }
+
+    private func addPanel(for screen: NSScreen) {
+        let panel = NSPanel(contentRect: screen.frame,
+                            styleMask: [.borderless, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        panel.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        panel.setFrame(screen.frame, display: true)
+        let view = EffectsView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        view.manager = self
+        view.screenOrigin = screen.frame.origin
+        panel.contentView = view
+        panel.orderFrontRegardless()
+        panels.append(panel); views.append(view)
+    }
+
+    // Incremental display reconciliation (never tear-down-and-rebuild-all, which would
+    // open a coverage gap): add panels for new screens, drop panels whose screen is
+    // gone, and re-frame panels whose screen moved or changed resolution.
+    func reconcileScreens() {
+        guard renderTimer != nil else { return }   // only while showing
+        let screens = NSScreen.screens
+        simBounds = screens.reduce(NSRect.zero) { $0.union($1.frame) }
+        if simBounds.isEmpty { simBounds = primaryScreen()?.frame ?? .zero }
+
+        // Match panels to screens by proximity of origin; a panel with no screen dies.
+        var unclaimed = Set(panels.indices)
+        for screen in screens {
+            if let i = unclaimed.first(where: { views[$0].screenOrigin == screen.frame.origin }) {
+                unclaimed.remove(i)
+                if panels[i].frame != screen.frame {
+                    panels[i].setFrame(screen.frame, display: true)
+                    views[i].frame = NSRect(origin: .zero, size: screen.frame.size)
+                }
+            } else {
+                addPanel(for: screen)
+            }
+        }
+        for i in unclaimed.sorted(by: >) {
+            panels[i].orderOut(nil)
+            panels.remove(at: i); views.remove(at: i)
+        }
+    }
+
+    // Called by EffectsView when a real AppKit input event lands on the overlay while
+    // armed. The tap swallows everything when healthy, so this only happens if input
+    // is leaking — report once and let the owner tear kid mode down.
+    fileprivate func inputReachedOverlay() {
+        guard state.isArmed(), !leakReported else { return }
+        leakReported = true
+        NSLog("[kiddyproof] INPUT LEAK: an event reached the overlay through AppKit.")
+        onLeakDetected?()
     }
 
     // Programmatic scene switch (used by the demo / could be a parent hotkey).
@@ -230,7 +276,11 @@ final class OverlayWindowManager: NSObject {
         director.draw(into: ctx, bounds: bounds, origin: origin, now: now)
         cursorFX.draw(into: ctx, origin: origin, skin: director.skin, now: now)
         if orb.enabled { orb.draw(into: ctx, origin: origin, now: now) }
-        drawExitAndHint(into: ctx, bounds: bounds)
+        // Exit ring + hint only on the PRIMARY screen — the exit corner lives there
+        // (ExitGestureController), so drawing it on every screen would point parents
+        // at corners that don't exit.
+        let primaryOrigin = primaryScreen()?.frame.origin ?? .zero
+        if origin == primaryOrigin { drawExitAndHint(into: ctx, bounds: bounds) }
     }
 
     private func drawExitAndHint(into ctx: CGContext, bounds: CGRect) {
@@ -283,4 +333,18 @@ final class EffectsView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         manager?.render(into: ctx, bounds: bounds, origin: screenOrigin)
     }
+
+    // While the suppressing tap is healthy, NO input event can reach this view via the
+    // normal AppKit path (the tap returns nil before WindowServer routes anything).
+    // So any event landing here while armed is proof of a leak — the overlay doubles
+    // as both a physical input sink (clicks are absorbed here, not by the apps below)
+    // and a tripwire that tears kid mode down. Synthetic health probes are mouseMoved
+    // events, which NSView ignores without a tracking area, so they can't false-fire.
+    override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
+    override func rightMouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
+    override func otherMouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
+    override func scrollWheel(with event: NSEvent) { manager?.inputReachedOverlay() }
+    override func keyDown(with event: NSEvent) { manager?.inputReachedOverlay() }
 }

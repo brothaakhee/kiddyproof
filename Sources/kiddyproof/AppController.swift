@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import IOKit.pwr_mgt
 
 final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let suppressor = InputSuppressor()
@@ -7,10 +8,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let exitController = ExitGestureController()
     private let watchdog = WatchdogClient()
     private let state = KidModeState.shared
+    private lazy var healthMonitor = TapHealthMonitor(suppressor: suppressor)
 
     private var statusItem: NSStatusItem?
     private var securedPoll: Timer?
     private var demoTimer: Timer?
+    private var sessionTimer: Timer?
+    private var sleepAssertion: IOPMAssertionID = 0
+    private var savedPresentationOptions: NSApplication.PresentationOptions = []
 
     let settings = SettingsStore()
     private var demoMax: TimeInterval?   // demo-only watchdog backstop override
@@ -33,6 +38,35 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         suppressor.start()
         watchdog.startIfAvailable()
         exitController.onExit = { [weak self] in self?.disarmKidMode(reason: "parent exit gesture") }
+
+        // If the failsafe process dies while a session is running, bail out loudly —
+        // never keep running with an imaginary watchdog.
+        watchdog.onWatchdogDied = { [weak self] in
+            guard let self = self, self.state.isArmed() else { return }
+            self.disarmKidMode(reason: "watchdog process died")
+            self.alert(title: "Kid mode ended",
+                       text: "The safety watchdog stopped unexpectedly, so kid mode was exited. You can start it again from the menu bar.")
+        }
+
+        // Continuous tap health: on unrecoverable tap death, FAIL LOUD — tear kid mode
+        // down instead of leaving an armed-looking overlay over leaking input.
+        healthMonitor.onUnrecoverable = { [weak self] detail in
+            guard let self = self, self.state.isArmed() else { return }
+            self.disarmKidMode(reason: "tap unrecoverable: \(detail)")
+            self.alert(title: "Kid mode ended",
+                       text: "Input blocking stopped working (usually a permissions change or a system glitch) and could not be restored, so kid mode was exited for safety. Relaunch kiddyproof before starting it again.")
+        }
+
+        // Any input event that reaches our overlay through the normal AppKit path is
+        // PROOF the suppressing tap is not swallowing input — a live leak. Bail.
+        overlay.onLeakDetected = { [weak self] in
+            guard let self = self, self.state.isArmed() else { return }
+            self.disarmKidMode(reason: "input leak detected at overlay")
+            self.alert(title: "Kid mode ended",
+                       text: "An input event slipped past the blocker, so kid mode was exited for safety. Relaunch kiddyproof before starting it again.")
+        }
+
+        installSystemObservers()
 
         NSLog("[kiddyproof] ready. Enter kid mode with ⌃⌥⌘K or the menu-bar item.")
 
@@ -231,6 +265,49 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let r = i.representedObject as? String, let c = KidSettings.Ceiling(rawValue: r) { settings.update { $0.intensityCeiling = c } }
     }
 
+    // MARK: - System observers (sleep / lock / session / displays)
+
+    // Sleep, screen lock, and fast-user-switch all pull the rug out from under a
+    // session tap (and macOS may leave it installed-but-dead afterwards). The safe,
+    // simple contract: any of these events ends kid mode cleanly. This also removes
+    // the wake-time race where a suspended main app misses heartbeats and gets
+    // spuriously SIGKILLed by the watchdog.
+    private func installSystemObservers() {
+        let ws = NSWorkspace.shared.notificationCenter
+        ws.addObserver(self, selector: #selector(systemInterruption(_:)),
+                       name: NSWorkspace.willSleepNotification, object: nil)
+        ws.addObserver(self, selector: #selector(systemInterruption(_:)),
+                       name: NSWorkspace.screensDidSleepNotification, object: nil)
+        ws.addObserver(self, selector: #selector(systemInterruption(_:)),
+                       name: NSWorkspace.sessionDidResignActiveNotification, object: nil)
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(systemInterruption(_:)),
+            name: NSNotification.Name("com.apple.screenIsLocked"), object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(screensChanged),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+
+    @objc private func systemInterruption(_ note: Notification) {
+        guard state.isArmed() else { return }
+        disarmKidMode(reason: "system interruption (\(note.name.rawValue))")
+    }
+
+    // Display plugged/unplugged or resolution changed mid-session: reconcile the
+    // overlay panels, re-clamp the virtual cursor, and re-assert the cursor freeze.
+    @objc private func screensChanged() {
+        guard state.isArmed() else { return }
+        let bounds = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
+        suppressor.clampBounds = bounds
+        state.update { s in
+            s.virtualCursor.x = min(max(s.virtualCursor.x, bounds.minX), bounds.maxX)
+            s.virtualCursor.y = min(max(s.virtualCursor.y, bounds.minY), bounds.maxY)
+        }
+        overlay.reconcileScreens()
+        CursorController.reassert()
+        NSLog("[kiddyproof] display configuration changed — overlay reconciled.")
+    }
+
     // MARK: - Arm / disarm
 
     private func armKidMode() {
@@ -271,7 +348,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Engage the failsafe FIRST and gate on it: never enter kid mode without a
         // working watchdog (the parent must always be able to get out). On failure we
         // bail before freezing the cursor / showing the overlay / setting armed.
-        guard watchdog.arm(maxSeconds: demoMax ?? settings.current.maxSessionSeconds) else {
+        // The in-app session timer owns the CLEAN session end; the watchdog deadline
+        // runs 10s behind it as the SIGKILL backstop for a wedged app.
+        let sessionSeconds = demoMax ?? settings.current.maxSessionSeconds
+        guard watchdog.arm(maxSeconds: sessionSeconds + 10) else {
             alert(title: "Can't start kid mode",
                   text: "The safety watchdog couldn't be engaged, so kid mode was not started — you must always be able to exit. Quit and relaunch kiddyproof.")
             return
@@ -282,29 +362,77 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         state.setArmed(true)
         exitController.start()
         startSecurePoll()
+        healthMonitor.start()
+        startSessionTimer(seconds: sessionSeconds)
+        engageKioskHardening()
+        preventDisplaySleep()
 
-        NSLog("[kiddyproof] KID MODE ARMED.")
+        NSLog("[kiddyproof] KID MODE ARMED (limit \(Int(sessionSeconds))s).")
     }
 
     private func disarmKidMode(reason: String) {
         guard state.isArmed() else { return }
         state.setArmed(false)
+        healthMonitor.stop()
         demoTimer?.invalidate(); demoTimer = nil
         securedPoll?.invalidate(); securedPoll = nil
+        sessionTimer?.invalidate(); sessionTimer = nil
         exitController.stop()
         overlay.hide()
         CursorController.restore()
+        releaseKioskHardening()
+        allowDisplaySleep()
         watchdog.disarm()
         NSLog("[kiddyproof] KID MODE EXITED (\(reason)).")
     }
 
+    // Clean, in-app session end. The watchdog's deadline (sessionSeconds + 10) only
+    // fires if this timer never got to run — i.e. the app was truly wedged.
+    private func startSessionTimer(seconds: TimeInterval) {
+        let t = Timer(timeInterval: seconds, repeats: false) { [weak self] _ in
+            guard let self = self, self.state.isArmed() else { return }
+            self.disarmKidMode(reason: "session limit reached")
+            self.alert(title: "Kid mode ended",
+                       text: "The session limit was reached, so kid mode exited on its own. Start it again from the menu bar or with ⌃⌥⌘K.")
+        }
+        RunLoop.main.add(t, forMode: .common)
+        sessionTimer = t
+    }
+
+    // OS-level hardening independent of the tap: while armed, ask macOS itself to
+    // disable Force Quit, process switching, session termination, and to hide the
+    // menu bar and Dock. (This combo is the documented-consistent kiosk set.)
+    private func engageKioskHardening() {
+        savedPresentationOptions = NSApp.presentationOptions
+        NSApp.presentationOptions = [
+            .autoHideDock, .autoHideMenuBar,
+            .disableForceQuit, .disableProcessSwitching,
+            .disableSessionTermination, .disableHideApplication,
+        ]
+    }
+    private func releaseKioskHardening() {
+        NSApp.presentationOptions = savedPresentationOptions
+    }
+
+    // Keep the display awake while a kid is playing so the idle timer can't drop the
+    // session to the lock screen mid-play.
+    private func preventDisplaySleep() {
+        var id: IOPMAssertionID = 0
+        let ok = IOPMAssertionCreateWithName(
+            kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            "kiddyproof kid mode is active" as CFString, &id)
+        sleepAssertion = ok == kIOReturnSuccess ? id : 0
+    }
+    private func allowDisplaySleep() {
+        if sleepAssertion != 0 { IOPMAssertionRelease(sleepAssertion); sleepAssertion = 0 }
+    }
+
     // Post a harmless synthetic mouse-move and confirm the callback observed it.
+    // (The same probe runs continuously while armed — see TapHealthMonitor.)
     private func verifyTapIsLive() -> Bool {
         let before = state.heartbeat()
-        let loc = CGEvent(source: nil)?.location ?? .zero
-        if let e = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: loc, mouseButton: .left) {
-            e.post(tap: .cgSessionEventTap)
-        }
+        TapHealthMonitor.postSyntheticProbe()
         // Wait up to ~250ms for the tap thread to register it.
         for _ in 0..<50 {
             if state.heartbeat() > before { return true }

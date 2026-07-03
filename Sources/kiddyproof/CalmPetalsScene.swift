@@ -6,7 +6,7 @@ import AppKit
 // wallpaper. No veil.
 final class CalmPetalsScene: Scene {
     let name = "Petals"
-    let category = SceneCategory.archived
+    let category = SceneCategory.calm
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

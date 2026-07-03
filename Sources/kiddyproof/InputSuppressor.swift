@@ -1,0 +1,176 @@
+import AppKit
+import CoreGraphics
+
+// The load-bearing mechanism. A single CGEventTap at the session level, head-inserted,
+// in DEFAULT (suppressing) mode. It runs on a dedicated high-priority thread and its
+// callback does almost nothing: classify, copy a little state for the renderer, and
+// return nil (swallow) or the event (pass through). All real work happens elsewhere.
+//
+// Idle state: pass everything through, but watch for the ENTER chord (Ctrl+Opt+Cmd+K)
+// and swallow + arm when seen. Armed state: swallow every input event, while updating
+// the virtual cursor / button / modifier-chord state that the exit gesture and effects
+// read.
+final class InputSuppressor {
+    private var tap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+    private var thread: Thread?
+    private(set) var runLoop: CFRunLoop?
+
+    // K. Enter chord is Ctrl+Opt+Cmd+K.
+    static let kKeyCodeK: Int64 = 40
+
+    // Called (on main) when the parent presses the enter chord while idle.
+    var onEnterChord: (() -> Void)?
+
+    // Bounds the virtual cursor is clamped to while armed (set on arm).
+    var clampBounds: NSRect = .zero
+
+    private let state = KidModeState.shared
+
+    func start() {
+        let t = Thread { [weak self] in self?.threadMain() }
+        t.qualityOfService = .userInteractive
+        t.name = "kiddyproof.tap"
+        t.start()
+        self.thread = t
+    }
+
+    private func threadMain() {
+        self.runLoop = CFRunLoopGetCurrent()
+
+        // Everything a toddler can hit with keyboard/trackpad/mouse/scroll.
+        let types: [CGEventType] = [
+            .keyDown, .keyUp, .flagsChanged,
+            .leftMouseDown, .leftMouseUp, .leftMouseDragged,
+            .rightMouseDown, .rightMouseUp, .rightMouseDragged,
+            .otherMouseDown, .otherMouseUp, .otherMouseDragged,
+            .mouseMoved, .scrollWheel,
+        ]
+        var mask: CGEventMask = 0
+        for t in types { mask |= (1 << CGEventMask(t.rawValue)) }
+
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,                 // suppressing tap (NOT listenOnly)
+            eventsOfInterest: mask,
+            callback: tapCallback,
+            userInfo: selfPtr
+        ) else {
+            // Almost always means Accessibility is not granted, the app is sandboxed,
+            // or the activation policy is wrong.
+            NSLog("[kiddyproof] tapCreate FAILED — Accessibility not granted? Aborting tap thread.")
+            return
+        }
+        self.tap = tap
+
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        self.runLoopSource = source
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+        NSLog("[kiddyproof] event tap installed and enabled (idle/pass-through).")
+        CFRunLoopRun()
+    }
+
+    func reEnableIfNeeded() {
+        guard let tap = tap else { return }
+        if !CGEvent.tapIsEnabled(tap: tap) {
+            NSLog("[kiddyproof] tap was disabled — re-enabling.")
+            CGEvent.tapEnable(tap: tap, enable: true)
+        }
+    }
+
+    private enum Action { case pass, swallow, enter }
+
+    fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // The OS disables a tap that is too slow or on certain user input; re-enable.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            return nil
+        }
+
+        let flags = event.flags
+        let chord = flags.contains(.maskControl) && flags.contains(.maskAlternate) && flags.contains(.maskCommand)
+        let now = ProcessInfo.processInfo.systemUptime
+
+        // One lock per event: bump heartbeat, branch on armed, mutate, decide outcome.
+        let action: Action = state.update { s in
+            s.bumpHeartbeat()
+
+            if !s.armed {
+                // Idle: only intercept the enter chord; pass everything else through.
+                if type == .keyDown && chord
+                    && event.getIntegerValueField(.keyboardEventKeycode) == InputSuppressor.kKeyCodeK {
+                    return .enter
+                }
+                return .pass
+            }
+
+            s.exitChordHeld = chord
+            switch type {
+            case .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
+                var p = s.virtualCursor
+                p.x += event.getDoubleValueField(.mouseEventDeltaX)
+                p.y -= event.getDoubleValueField(.mouseEventDeltaY) // delta is y-down; screen is y-up
+                if clampBounds.width > 0 {
+                    p.x = min(max(p.x, clampBounds.minX), clampBounds.maxX)
+                    p.y = min(max(p.y, clampBounds.minY), clampBounds.maxY)
+                }
+                s.virtualCursor = p
+                s.cursorSeq &+= 1
+            case .leftMouseDown:
+                s.leftButtonDown = true
+                s.pushEvent(InputEvent(kind: .click(s.virtualCursor, .left), time: now))
+            case .leftMouseUp:
+                s.leftButtonDown = false
+            case .rightMouseDown:
+                s.pushEvent(InputEvent(kind: .click(s.virtualCursor, .right), time: now))
+            case .otherMouseDown:
+                s.pushEvent(InputEvent(kind: .click(s.virtualCursor, .other), time: now))
+            case .keyDown:
+                if let str = Self.character(from: event), !str.isEmpty {
+                    s.pushEvent(InputEvent(kind: .key(str), time: now))
+                }
+            case .scrollWheel:
+                let dy = event.getDoubleValueField(.scrollWheelEventDeltaAxis1)
+                if dy != 0 { s.pushEvent(InputEvent(kind: .scroll(dy), time: now)) }
+            default:
+                break
+            }
+            return .swallow
+        }
+
+        switch action {
+        case .pass: return Unmanaged.passUnretained(event)
+        case .enter:
+            DispatchQueue.main.async { [weak self] in self?.onEnterChord?() }
+            return nil // swallow so "K" is never typed
+        case .swallow: return nil // the underlying apps never see it
+        }
+    }
+
+    private static func character(from event: CGEvent) -> String? {
+        var length = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+        if length == 0 { return nil }
+        let s = String(utf16CodeUnits: chars, count: length)
+        // Filter control characters so we show real glyphs (letters, digits, space).
+        if s.unicodeScalars.allSatisfy({ $0.value < 32 }) { return nil }
+        return s.uppercased()
+    }
+}
+
+// Top-level C callback — must not capture state; the instance comes via userInfo.
+private func tapCallback(
+    proxy: CGEventTapProxy,
+    type: CGEventType,
+    event: CGEvent,
+    userInfo: UnsafeMutableRawPointer?
+) -> Unmanaged<CGEvent>? {
+    guard let userInfo = userInfo else { return Unmanaged.passUnretained(event) }
+    let suppressor = Unmanaged<InputSuppressor>.fromOpaque(userInfo).takeUnretainedValue()
+    return suppressor.handle(type: type, event: event)
+}

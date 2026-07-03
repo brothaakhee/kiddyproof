@@ -1,0 +1,14 @@
+:{$PORT:80} {
+	root * /srv
+	encode gzip zstd
+	file_server
+
+	# long cache for fingerprintable static assets, light cache for the page itself
+	@assets path *.png *.svg *.ico *.webmanifest *.woff2 *.woff
+	header @assets Cache-Control "public, max-age=604800"
+	@page not path *.png *.svg *.ico *.webmanifest *.woff2 *.woff
+	header @page Cache-Control "public, max-age=300"
+
+	header X-Content-Type-Options "nosniff"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "kiddyproof",
+  "short_name": "kiddyproof",
+  "description": "Hand over the keyboard. Keep your work. A native macOS app that turns a child's typing into calm, glowing light while your real desktop stays untouched.",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#0a0c18",
+  "background_color": "#0a0c18",
+  "display": "standalone"
+}

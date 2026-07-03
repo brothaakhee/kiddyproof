@@ -33,6 +33,10 @@ need a relaunch to take effect.
   shutdown.
 - ✅ **Secure-input hard-refuse observed live**: with Secure Keyboard Entry active
   system-wide, the app refused to arm (drill E1's first half) — verified 2026-07-03.
+- ⏸️ A same-day re-run of the F1 SIGSTOP drill against the NEW heartbeat client was
+  blocked by that same ambient Secure Event Input (the app correctly refused to arm,
+  so there was nothing to kill). The kill mechanics were live-verified earlier and the
+  enforcement decisions are unit-tested; re-run F1 once secure input is off.
 - ✅ `Scripts/package.sh` — release build → `dist/kiddyproof.app` (Info.plist lints,
   Sparkle.framework embedded, watchdog beside the main binary, ad-hoc + hardened-runtime
   signed) → `dist/kiddyproof-0.1.0.dmg`. Developer-ID signing + notarization take

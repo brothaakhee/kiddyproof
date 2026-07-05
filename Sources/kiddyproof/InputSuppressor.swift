@@ -139,6 +139,14 @@ final class InputSuppressor {
             return nil
         }
 
+        // Our own health probes prove the callback is alive and must do NOTHING else:
+        // bump the heartbeat and vanish. (They carry empty modifier flags, so letting
+        // them fall through would reset a parent's in-progress ⌃⌥⌘ exit hold.)
+        if event.getIntegerValueField(.eventSourceUserData) == TapHealthMonitor.probeTag {
+            let armed = state.update { s -> Bool in s.bumpHeartbeat(); return s.armed }
+            return armed ? nil : Unmanaged.passUnretained(event)
+        }
+
         let flags = event.flags
         let chord = flags.contains(.maskControl) && flags.contains(.maskAlternate) && flags.contains(.maskCommand)
         let now = ProcessInfo.processInfo.systemUptime

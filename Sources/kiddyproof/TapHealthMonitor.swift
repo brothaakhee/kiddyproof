@@ -43,12 +43,19 @@ final class TapHealthMonitor {
         timer = nil
     }
 
+    // Marks our synthetic probes so the tap callback can recognize them. A probe must
+    // prove the callback is alive and NOTHING else — an untagged probe carries empty
+    // modifier flags and was observed resetting a parent's in-progress ⌃⌥⌘ exit hold
+    // once per second, making the chord exit impossible to complete.
+    static let probeTag: Int64 = 0x6B50_5052   // "kPPR"
+
     // Post a synthetic mouse-move at the current location (zero delta, so it drives no
     // visuals) and wait briefly for the callback to observe it.
     static func postSyntheticProbe() {
         let loc = CGEvent(source: nil)?.location ?? .zero
         if let e = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved,
                            mouseCursorPosition: loc, mouseButton: .left) {
+            e.setIntegerValueField(.eventSourceUserData, value: probeTag)
             e.post(tap: .cgSessionEventTap)
         }
     }

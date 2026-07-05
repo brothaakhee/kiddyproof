@@ -39,17 +39,39 @@ final class ExitGestureController {
         state.update { $0.exitProgress = 0 }
     }
 
+    private var wasHolding = false
+    private var wasButtonDown = false
+    private var pressStartedInCorner = false
+
     private func tick() {
         guard !fired else { return }
         let now = ProcessInfo.processInfo.systemUptime
         let (chordHeld, buttonDown, cursor) = state.read { ($0.exitChordHeld, $0.leftButtonDown, $0.virtualCursor) }
-        let cornerHeld = buttonDown && NSPointInRect(cursor, cornerRect)
+
+        // The corner hold only counts if the PRESS BEGAN inside the corner: a parent
+        // deliberately aims there before pressing. A held drag that drifts into the
+        // corner (Black Hole's click-hold vacuum, exactly what the scene teaches a kid
+        // to do) must never convert into an exit.
+        let inCorner = NSPointInRect(cursor, cornerRect)
+        if buttonDown && !wasButtonDown { pressStartedInCorner = inCorner }
+        if !buttonDown { pressStartedInCorner = false }
+        wasButtonDown = buttonDown
+        let cornerHeld = buttonDown && inCorner && pressStartedInCorner
+
+        // Safety telemetry: an exit hold starting/firing is always worth a log line —
+        // it is the difference between "parent left deliberately" and a gesture bug.
+        let holding = chordHeld || cornerHeld
+        if holding != wasHolding {
+            wasHolding = holding
+            NSLog("[kiddyproof] exit-hold \(holding ? "STARTED" : "released"): chord=\(chordHeld) corner=\(cornerHeld) button=\(buttonDown) cursor=(\(Int(cursor.x)),\(Int(cursor.y)))")
+        }
 
         let progress = logic.progress(chordHeld: chordHeld, cornerHeld: cornerHeld, now: now)
         state.update { $0.exitProgress = progress }
 
         if progress >= 1 {
             fired = true
+            NSLog("[kiddyproof] exit gesture FIRED: chord=\(chordHeld) corner=\(cornerHeld) cursor=(\(Int(cursor.x)),\(Int(cursor.y)))")
             onExit?()
         }
     }

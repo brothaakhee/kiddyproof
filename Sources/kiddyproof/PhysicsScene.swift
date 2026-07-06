@@ -12,6 +12,11 @@ final class PhysicsScene: Scene {
     let skin = CursorSkin.blackHole
     let veil: CGFloat = 0.3           // dusk; the parent's real screen stays visible behind the bodies
     var draining = false
+    var audioSwell: CGFloat { holdLevel * 0.25 }
+
+    // Adaptive contrast cache (set each update; draw() has no context).
+    private var bgMap: BackgroundLuminance?
+    private var bgFallback: CGFloat = 0.3
 
     static let palette = Palette(
         [(1, 0.4, 0.4), (1, 0.75, 0.3), (1, 0.95, 0.45), (0.45, 0.85, 0.5),
@@ -36,6 +41,17 @@ final class PhysicsScene: Scene {
     private var accumulator: CGFloat = 0
     private var rng = RNG(seed: 0xB0D1E5)
 
+    // The world's gravity dial (scroll): 1 = earth, ~0.15 = moon, negative = float.
+    // Persists for the session — the kid SETS the world, it doesn't snap back.
+    private var gravScale: CGFloat = 1
+    // Tractor beam (hold): ramps the cursor attractor from a whisper to a crane.
+    private var holdLevel: CGFloat = 0
+    private var maxImpact: CGFloat = 0
+    private var cursorCache = NSPoint.zero
+
+    private static let auraGlow = softGlowSprite(NSColor(srgbRed: 0.72, green: 0.55, blue: 1.0, alpha: 1))
+    private static let groundCore = NSColor(srgbRed: 0.82, green: 0.86, blue: 1.0, alpha: 1)
+
     // spatial hash scratch, reused
     private var grid = [Int: [Int]]()
     private var collisionsThisFrame = 0
@@ -44,6 +60,7 @@ final class PhysicsScene: Scene {
         bodies.removeAll(keepingCapacity: true)
         grid.removeAll(keepingCapacity: true)
         letterCount = 0; ballCount = 0; accumulator = 0; draining = false
+        gravScale = 1; holdLevel = 0; maxImpact = 0
     }
 
     // At the caps the world RECYCLES (oldest body of that kind vanishes to make room)
@@ -64,9 +81,12 @@ final class PhysicsScene: Scene {
             guard !ch.isWhitespace else { return }
             if letterCount >= letterCap || bodies.count >= maxBodies { recycleOldest(letter: true) }
             guard letterCount < letterCap, bodies.count < maxBodies else { return }
-            bodies.append(Body(pos: NSPoint(x: ctx.cursor.x + rng.range(-30, 30), y: ctx.bounds.maxY - 40),
+            // Fall from a fixed height above the cursor: the union's top edge is dead
+            // space above a shorter monitor in multi-display layouts.
+            let spawnY = min(ctx.bounds.maxY - 40, ctx.cursor.y + 620)
+            bodies.append(Body(pos: NSPoint(x: ctx.cursor.x + rng.range(-30, 30), y: spawnY),
                                vel: NSPoint(x: rng.range(-40, 40), y: rng.range(-60, 0)),
-                               radius: 26, invMass: 1.0 / 1.4, restitution: 0.15,
+                               radius: 31, invMass: 1.0 / 1.4, restitution: 0.15,
                                color: UInt8(rng.int(Self.palette.colors.count)),
                                channel: UInt8(Channel.keys.rawValue), ch: ch,
                                angle: rng.range(-0.4, 0.4), angVel: rng.range(-3, 3)))
@@ -76,7 +96,7 @@ final class PhysicsScene: Scene {
             guard button == .left else { return }
             if ballCount >= ballCap || bodies.count >= maxBodies { recycleOldest(letter: false) }
             guard ballCount < ballCap, bodies.count < maxBodies else { return }
-            let r = rng.range(18, 30)
+            let r = rng.range(22, 36)
             bodies.append(Body(pos: pt, vel: NSPoint(x: rng.range(-260, 260), y: rng.range(-100, 320)),
                                radius: r, invMass: 1.0 / Double(r * 0.12), restitution: 0.72,
                                color: UInt8(rng.int(Self.palette.colors.count)),
@@ -84,13 +104,19 @@ final class PhysicsScene: Scene {
                                angle: 0, angVel: 0))
             ballCount += 1
             ctx.audio?.bonk(intensity: ctx.intensity)
-        case .scroll:
-            break
+        case .scroll(let dy):
+            // The gravity dial: down = heavy world, up = moon, past that = float.
+            gravScale = max(-0.25, min(1.6, gravScale - CGFloat(dy) * 0.05))
         }
     }
 
     func update(_ ctx: EffectContext) {
+        bgMap = ctx.background; bgFallback = ctx.fallbackLightness
+        cursorCache = ctx.cursor
+        if ctx.leftButtonDown && !draining { holdLevel += (1 - holdLevel) * min(1, ctx.dt * 2.6) }
+        else { holdLevel += (0 - holdLevel) * min(1, ctx.dt * 3.5) }
         collisionsThisFrame = 0
+        maxImpact = 0
         accumulator += ctx.dt
         var sub = 0
         while accumulator >= h && sub < 4 {
@@ -99,19 +125,24 @@ final class PhysicsScene: Scene {
             sub += 1
         }
         if sub == 4 { accumulator = 0 }     // drop backlog (spiral-of-death guard)
+        // Impacts make sound: the engine already measures them, let them BONK.
+        if maxImpact > 260 {
+            ctx.audio?.bonk(intensity: min(1, maxImpact / 1400))
+        }
     }
 
     private func substep(_ h: CGFloat, _ ctx: EffectContext) {
         let floorY = ctx.bounds.minY + 4
         let minX = ctx.bounds.minX, maxX = ctx.bounds.maxX
-        // attractor strength scales with intensity; modest so letters still stack.
-        let G: CGFloat = 1.2e6 * (0.3 + 0.7 * ctx.intensity)
+        // attractor strength scales with intensity; the TRACTOR BEAM (hold) ramps it
+        // from a whisper to a crane that hoists the pile into the air.
+        let G: CGFloat = 1.2e6 * (0.3 + 0.7 * ctx.intensity) * (1 + 8 * holdLevel)
         let eps2: CGFloat = 64 * 64
 
         // integrate
         for i in bodies.indices {
             var v = bodies[i].vel
-            v.y -= gravity * h
+            v.y -= gravity * gravScale * h
             let d = ctx.cursor - bodies[i].pos
             let r2 = hypot2(d) + eps2
             let f = G / (r2 * sqrt(r2))           // Plummer-softened, bounded
@@ -138,6 +169,12 @@ final class PhysicsScene: Scene {
             }
             if bodies[i].pos.x - r < minX { bodies[i].pos.x = minX + r; bodies[i].vel.x = abs(bodies[i].vel.x) * bodies[i].restitution }
             if bodies[i].pos.x + r > maxX { bodies[i].pos.x = maxX - r; bodies[i].vel.x = -abs(bodies[i].vel.x) * bodies[i].restitution }
+            // Ceiling: in float-gravity the pile must drift and bounce, not escape.
+            let ceilY = ctx.bounds.maxY - 4
+            if bodies[i].pos.y + r > ceilY, bodies[i].vel.y > 0 {
+                bodies[i].pos.y = ceilY - r
+                bodies[i].vel.y = -bodies[i].vel.y * bodies[i].restitution
+            }
         }
     }
 
@@ -192,17 +229,45 @@ final class PhysicsScene: Scene {
             let spin = (rvx * ny - rvy * nx) * 0.01
             bodies[i].angVel -= spin; bodies[j].angVel += spin
             collisionsThisFrame += 1
+            maxImpact = max(maxImpact, -relN)
         }
     }
 
     func liveCount() -> Int { bodies.count }
 
+    // The tractor beam made visible: a breathing violet aura + ring at the cursor,
+    // swelling with the hold so the invisible force finally has a body.
+    private func drawAura(into ctx: CGContext, origin: CGPoint) {
+        guard holdLevel > 0.03 else { return }
+        let cx = cursorCache.x - origin.x, cy = cursorCache.y - origin.y
+        let pulse = 1 + 0.07 * CGFloat(sin(CACurrentMediaTime() * 9))
+        let r = (30 + 46 * holdLevel) * pulse
+        let w = inkWeight(bgMap, bgFallback, cursorCache)
+        let ga = 0.55 * holdLevel * (1 - 0.6 * w)
+        if ga > 0.02 {
+            ctx.setBlendMode(.plusLighter); ctx.setAlpha(ga)
+            ctx.draw(Self.auraGlow, in: CGRect(x: cx - r * 1.6, y: cy - r * 1.6, width: r * 3.2, height: r * 3.2))
+            ctx.setBlendMode(.normal); ctx.setAlpha(1)
+        }
+        ctx.setLineWidth(2.2)
+        ctx.setStrokeColor(blendColor(NSColor(srgbRed: 0.72, green: 0.55, blue: 1.0, alpha: 1), .black, 0.4 * w)
+            .withAlphaComponent(0.5 + 0.4 * holdLevel).cgColor)
+        ctx.strokeEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+    }
+
     func draw(into ctx: CGContext, bounds: CGRect, origin: CGPoint) {
         // Effects only — the dusk veil + real screen are behind us.
-        ctx.setBlendMode(.normal)
-        // floor line
-        ctx.setStrokeColor(NSColor(white: 1, alpha: 0.12).cgColor); ctx.setLineWidth(2)
-        ctx.beginPath(); ctx.move(to: CGPoint(x: 0, y: 6)); ctx.addLine(to: CGPoint(x: bounds.width, y: 6)); ctx.strokePath()
+        ctx.setBlendMode(.normal); ctx.setAlpha(1)
+        // THE GROUND: a real glowing shelf, not an invisible 12%-alpha hairline —
+        // the pile needs a stage to land on. Adaptive: dark casing carries it on
+        // light wallpaper, the bright edge on dark.
+        let gw = inkWeight(bgMap, bgFallback, NSPoint(x: origin.x + bounds.midX, y: origin.y + 20))
+        ctx.setFillColor(NSColor.black.withAlphaComponent(0.18 + 0.28 * gw).cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: bounds.width, height: 9))
+        ctx.setStrokeColor(blendColor(Self.groundCore, .black, 0.5 * gw)
+            .withAlphaComponent(0.75).cgColor)
+        ctx.setLineWidth(2.4)
+        ctx.beginPath(); ctx.move(to: CGPoint(x: 0, y: 9)); ctx.addLine(to: CGPoint(x: bounds.width, y: 9)); ctx.strokePath()
         for b in bodies {
             let c = CGPoint(x: b.pos.x - origin.x, y: b.pos.y - origin.y)
             let color = Self.palette.colors[Int(b.color) % Self.palette.colors.count]
@@ -215,6 +280,7 @@ final class PhysicsScene: Scene {
                 ctx.fillEllipse(in: CGRect(x: c.x - b.radius * 0.4, y: c.y + b.radius * 0.1, width: b.radius * 0.5, height: b.radius * 0.5))
             }
         }
+        drawAura(into: ctx, origin: origin)
     }
 
     // --- glyph cache: render each character once into an alpha mask image. ---

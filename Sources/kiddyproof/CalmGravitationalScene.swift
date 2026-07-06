@@ -13,7 +13,7 @@ import AppKit
 // A faint twinkling starfield sits behind everything. Adaptive-contrast throughout.
 final class CalmGravitationalScene: Scene {
     let name = "Orrery"
-    let category = SceneCategory.calm
+    let category = SceneCategory.archived
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

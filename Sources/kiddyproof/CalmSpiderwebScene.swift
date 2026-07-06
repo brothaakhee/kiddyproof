@@ -256,9 +256,9 @@ final class CalmSpiderwebScene: Scene {
         ctx.setBlendMode(.normal)
         ctx.setLineCap(.round)
         ctx.addPath(path)
-        ctx.setLineWidth(3.4)
-        ctx.setStrokeColor(blendColor(color, .black, 0.45 + 0.15 * w)
-            .withAlphaComponent(alpha * (0.5 + 0.35 * w)).cgColor)
+        ctx.setLineWidth(2.6)
+        ctx.setStrokeColor(blendColor(color, .black, 0.35 + 0.2 * w)
+            .withAlphaComponent(alpha * (0.32 + 0.3 * w)).cgColor)
         ctx.strokePath()
         // Core: the vivid color, lifted slightly toward white on dark backgrounds so
         // it pops, deepened to pure saturation over bright ones. The white-hot sheen
@@ -270,7 +270,7 @@ final class CalmSpiderwebScene: Scene {
         // the actual flash.
         if sheen > 0.02 { core = blendColor(core, Self.sheenTint, sheen * 0.3 * (1 - w)) }
         ctx.addPath(path)
-        ctx.setLineWidth(1.6)
+        ctx.setLineWidth(1.1)
         ctx.setStrokeColor(core.withAlphaComponent(alpha).cgColor)
         ctx.strokePath()
         // Over dark pixels every strand carries a constant soft colored glow (neon,
@@ -291,7 +291,7 @@ final class CalmSpiderwebScene: Scene {
         if let c = current, c.pts.count > 1 { all.append(c) }
         for (ti, t) in all.enumerated() where t.pts.count > 1 {
             let vibrating = now - t.pluckTime < 1.4
-            let baseA: CGFloat = vibrating ? 0.95 : 0.8
+            let baseA: CGFloat = vibrating ? 0.85 : 0.62
             // Chunked rendering (~32 points): background adaptation and the traveling
             // sheen both vary smoothly ALONG a thread instead of popping per thread.
             let chunk = 32

@@ -134,10 +134,14 @@ final class PhysicsScene: Scene {
     private func substep(_ h: CGFloat, _ ctx: EffectContext) {
         let floorY = ctx.bounds.minY + 4
         let minX = ctx.bounds.minX, maxX = ctx.bounds.maxX
-        // attractor strength scales with intensity; the TRACTOR BEAM (hold) ramps it
-        // from a whisper to a crane that hoists the pile into the air.
-        let G: CGFloat = 1.2e6 * (0.3 + 0.7 * ctx.intensity) * (1 + 8 * holdLevel)
+        // Ambient attractor (inverse-cube, a whisper). The TRACTOR BEAM is separate:
+        // an inverse-cube force is orders of magnitude below gravity at any real
+        // distance, so scaling it up did nothing — the beam is a capture FIELD whose
+        // pull genuinely beats weight (2900 px/s² vs gravity's 1500), with damping so
+        // grabbed bodies settle into the hand instead of slingshotting past it.
+        let G: CGFloat = 1.2e6 * (0.3 + 0.7 * ctx.intensity)
         let eps2: CGFloat = 64 * 64
+        let beamR: CGFloat = 340
 
         // integrate
         for i in bodies.indices {
@@ -148,6 +152,18 @@ final class PhysicsScene: Scene {
             let f = G / (r2 * sqrt(r2))           // Plummer-softened, bounded
             v.x += d.x * f * h
             v.y += d.y * f * h
+            if holdLevel > 0.05 {
+                let dist = sqrt(hypot2(d))
+                if dist < beamR, dist > 1 {
+                    let edge = 1 - dist / beamR
+                    let pull = 2900 * holdLevel * (0.35 + 0.65 * edge)
+                    v.x += d.x / dist * pull * h
+                    v.y += d.y / dist * pull * h
+                    // capture damping: strongest near the hand, so the clump hovers
+                    let damp = exp(-3.2 * holdLevel * edge * h)
+                    v.x *= damp; v.y *= damp
+                }
+            }
             let sp2 = hypot2(v)
             if sp2 > vMax * vMax { let s = vMax / sqrt(sp2); v.x *= s; v.y *= s }
             bodies[i].vel = v

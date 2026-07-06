@@ -5,12 +5,6 @@ import Foundation
 // render/tap threads as a single snapshot through the existing KidModeState lock, so a
 // reader always sees an internally-consistent set (never a torn half-applied edit).
 public struct KidSettings: Codable, Equatable {
-    public enum Ceiling: String, Codable, CaseIterable {
-        case calm, balanced, wild
-        public var multiplier: CGFloat { switch self { case .calm: return 0.45; case .balanced: return 1.0; case .wild: return 1.8 } }
-        public var label: String { switch self { case .calm: return "Calm"; case .balanced: return "Balanced"; case .wild: return "Wild" } }
-    }
-
     public var defaultScene: String
     public var kidSwitching: Bool          // may the kid change scenes (orb / shuffle / shake)
     public var disabledScenes: Set<String> // parent-disabled scenes (empty = all enabled)
@@ -19,18 +13,17 @@ public struct KidSettings: Codable, Equatable {
     public var shakeToShuffle: Bool
     public var audioEnabled: Bool
     public var audioVolume: Double         // 0…1
-    public var intensityCeiling: Ceiling
     public var maxSessionSeconds: Double
     public var adaptiveContrast: Bool      // opt-in: sample the desktop (Screen Recording) at arm
 
     public static let `default` = KidSettings(
         defaultScene: "Black Hole", kidSwitching: true, disabledScenes: [], autoShuffle: false,
         shuffleInterval: 30, shakeToShuffle: true, audioEnabled: true, audioVolume: 0.8,
-        intensityCeiling: .balanced, maxSessionSeconds: 600, adaptiveContrast: false)
+        maxSessionSeconds: 600, adaptiveContrast: false)
 
     public init(defaultScene: String, kidSwitching: Bool, disabledScenes: Set<String>, autoShuffle: Bool,
                 shuffleInterval: Double, shakeToShuffle: Bool, audioEnabled: Bool, audioVolume: Double,
-                intensityCeiling: Ceiling, maxSessionSeconds: Double, adaptiveContrast: Bool) {
+                maxSessionSeconds: Double, adaptiveContrast: Bool) {
         self.defaultScene = defaultScene
         self.kidSwitching = kidSwitching
         self.disabledScenes = disabledScenes
@@ -39,7 +32,6 @@ public struct KidSettings: Codable, Equatable {
         self.shakeToShuffle = shakeToShuffle
         self.audioEnabled = audioEnabled
         self.audioVolume = audioVolume
-        self.intensityCeiling = intensityCeiling
         self.maxSessionSeconds = maxSessionSeconds
         self.adaptiveContrast = adaptiveContrast
     }
@@ -58,7 +50,6 @@ public struct KidSettings: Codable, Equatable {
         shakeToShuffle = try c.decodeIfPresent(Bool.self, forKey: .shakeToShuffle) ?? d.shakeToShuffle
         audioEnabled = try c.decodeIfPresent(Bool.self, forKey: .audioEnabled) ?? d.audioEnabled
         audioVolume = try c.decodeIfPresent(Double.self, forKey: .audioVolume) ?? d.audioVolume
-        intensityCeiling = try c.decodeIfPresent(Ceiling.self, forKey: .intensityCeiling) ?? d.intensityCeiling
         maxSessionSeconds = try c.decodeIfPresent(Double.self, forKey: .maxSessionSeconds) ?? d.maxSessionSeconds
         adaptiveContrast = try c.decodeIfPresent(Bool.self, forKey: .adaptiveContrast) ?? d.adaptiveContrast
     }

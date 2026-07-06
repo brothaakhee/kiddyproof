@@ -54,7 +54,6 @@ final class KidSettingsTests: XCTestCase {
     func testCodableRoundTrip() throws {
         var s = KidSettings.default
         s.defaultScene = "Ripples"
-        s.intensityCeiling = .wild
         s.audioVolume = 0.25
         let data = try JSONEncoder().encode(s)
         let back = try JSONDecoder().decode(KidSettings.self, from: data)

@@ -211,7 +211,7 @@ final class OverlayWindowManager: NSObject {
             s.renderTick &+= 1     // proves the render loop is making progress (decoupled heartbeat)
             lastExitProgress = s.exitProgress   // one snapshot drives all per-frame visuals
             lastChordHeld = s.exitChordHeld
-            return (s.virtualCursor, s.eventHeartbeat, s.settings.intensityCeiling.multiplier, s.drainEvents(), s.leftButtonDown)
+            return (s.virtualCursor, s.eventHeartbeat, MashMeter.fixedCeilingMult, s.drainEvents(), s.leftButtonDown)
         }
         let cursor = snap.0
         updateHint(cursor: cursor, now: now, dt: CGFloat(dt))

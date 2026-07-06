@@ -273,7 +273,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(check("Sound", #selector(toggleAudio), on: s.audioEnabled))
         menu.addItem(radio("Volume", [("25%", 0.25), ("50%", 0.5), ("75%", 0.75), ("100%", 1.0)],
                            current: s.audioVolume, sel: #selector(setVolume(_:))))
-        menu.addItem(intensityItem(s.intensityCeiling))
         menu.addItem(radio("Session Limit", [("2 min", 120), ("5 min", 300), ("10 min", 600), ("30 min", 1800), ("No limit", 0)],
                            current: s.maxSessionSeconds, sel: #selector(setSession(_:))))
     }
@@ -299,19 +298,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         parent.submenu = sub
         return parent
     }
-    private func intensityItem(_ current: KidSettings.Ceiling) -> NSMenuItem {
-        let parent = NSMenuItem(title: "Intensity", action: nil, keyEquivalent: "")
-        let sub = NSMenu()
-        for c in KidSettings.Ceiling.allCases {
-            let it = NSMenuItem(title: c.label, action: #selector(setCeiling(_:)), keyEquivalent: ""); it.target = self
-            it.representedObject = c.rawValue
-            it.state = current == c ? .on : .off
-            sub.addItem(it)
-        }
-        parent.submenu = sub
-        return parent
-    }
-
     @objc private func setDefaultScene(_ i: NSMenuItem) { if let n = i.representedObject as? String { settings.update { $0.defaultScene = n } } }
     @objc private func toggleKidSwitching() { settings.update { $0.kidSwitching.toggle() } }
     @objc private func toggleScene(_ i: NSMenuItem) {
@@ -355,9 +341,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc private func setVolume(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.audioVolume = v } } }
     @objc private func setSession(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.maxSessionSeconds = v } } }
-    @objc private func setCeiling(_ i: NSMenuItem) {
-        if let r = i.representedObject as? String, let c = KidSettings.Ceiling(rawValue: r) { settings.update { $0.intensityCeiling = c } }
-    }
 
     // MARK: - System observers (sleep / lock / session / displays)
 

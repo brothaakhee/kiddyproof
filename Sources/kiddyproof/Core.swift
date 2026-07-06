@@ -228,12 +228,17 @@ protocol Scene: AnyObject {
 extension Scene { var audioSwell: CGFloat { 0 } }   // most scenes have no continuous audio drive
 
 // ---------------------------------------------------------------------------
-// MashMeter: the intensity modulator. Smoothed 0…1 from events/sec with an
+// MashMeter: the intensity modulator. The parent-facing ceiling setting was
+// removed (2026-07-06): it only changed loudness in most scenes; the app now
+// always runs the old "Wild" multiplier and scenes stay calm by DESIGN
+// (their own reactivity profiles), not by damping.
+// Smoothed 0…1 from events/sec with an
 // attack/decay envelope; capped by the settings ceiling. Never switches scenes.
 // ---------------------------------------------------------------------------
 final class MashMeter {
     private var lastHeartbeat: UInt64 = 0
     private var value: CGFloat = 0
+    static let fixedCeilingMult: CGFloat = 1.8   // the old "Wild" setting, now always on
     private(set) var intensity: CGFloat = 0
 
     // `reactivity` is the active scene's profile; `ceilingMult` is the parent's global

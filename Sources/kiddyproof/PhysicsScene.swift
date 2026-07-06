@@ -7,7 +7,7 @@ import AppKit
 // Plummer-softened attractor (no NaN), and a global speed clamp (no tunneling).
 final class PhysicsScene: Scene {
     let name = "Physics Playground"
-    let category = SceneCategory.energetic
+    let category = SceneCategory.live
     let reactivity = Reactivity.energetic
     let skin = CursorSkin.blackHole
     let veil: CGFloat = 0.3           // dusk; the parent's real screen stays visible behind the bodies

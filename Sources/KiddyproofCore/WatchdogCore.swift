@@ -45,7 +45,9 @@ public enum WatchdogCore {
             case .arm(let maxSeconds):
                 enforcing = true
                 lastPing = now
-                armDeadline = now.addingTimeInterval(maxSeconds)
+                // maxSeconds <= 0 = NO LIMIT: heartbeat enforcement only (the
+                // parent-lockout protection never has an off switch).
+                armDeadline = maxSeconds > 0 ? now.addingTimeInterval(maxSeconds) : nil
             case .ping:
                 lastPing = now
             case .disarm:

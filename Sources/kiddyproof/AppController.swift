@@ -239,14 +239,26 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         let s = settings.current
         addHeader("Default Scene", to: menu)
-        for name in overlay.pickableSceneNames {
+        for name in overlay.pickableSceneNames where !s.disabledScenes.contains(name) {
             let it = check(name, #selector(setDefaultScene(_:)), on: s.defaultScene == name)
             it.representedObject = name
             menu.addItem(it)
         }
         menu.addItem(.separator())
+        // Per-scene enable/disable: every scene that made the cut is one list; the
+        // parent curates it. The last enabled scene can't be disabled.
+        let scenesItem = NSMenuItem(title: "Scenes", action: nil, keyEquivalent: "")
+        let scenesMenu = NSMenu()
+        for name in overlay.pickableSceneNames {
+            let it = NSMenuItem(title: name, action: #selector(toggleScene(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = name
+            it.state = s.disabledScenes.contains(name) ? .off : .on
+            scenesMenu.addItem(it)
+        }
+        scenesItem.submenu = scenesMenu
+        menu.addItem(scenesItem)
         menu.addItem(check("Kid Can Change Scenes", #selector(toggleKidSwitching), on: s.kidSwitching))
-        menu.addItem(check("Include Energetic Scenes", #selector(toggleEnergetic), on: s.energeticEnabled))
         menu.addItem(check("Auto-Shuffle Scenes", #selector(toggleAutoShuffle), on: s.autoShuffle))
         menu.addItem(radio("Shuffle Every", [("15s", 15), ("30s", 30), ("60s", 60), ("2 min", 120)],
                            current: s.shuffleInterval, sel: #selector(setShuffleInterval(_:))))
@@ -262,7 +274,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(radio("Volume", [("25%", 0.25), ("50%", 0.5), ("75%", 0.75), ("100%", 1.0)],
                            current: s.audioVolume, sel: #selector(setVolume(_:))))
         menu.addItem(intensityItem(s.intensityCeiling))
-        menu.addItem(radio("Session Limit", [("1 min", 60), ("2 min", 120), ("5 min", 300), ("10 min", 600)],
+        menu.addItem(radio("Session Limit", [("2 min", 120), ("5 min", 300), ("10 min", 600), ("30 min", 1800), ("No limit", 0)],
                            current: s.maxSessionSeconds, sel: #selector(setSession(_:))))
     }
 
@@ -302,7 +314,23 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func setDefaultScene(_ i: NSMenuItem) { if let n = i.representedObject as? String { settings.update { $0.defaultScene = n } } }
     @objc private func toggleKidSwitching() { settings.update { $0.kidSwitching.toggle() } }
-    @objc private func toggleEnergetic() { settings.update { $0.energeticEnabled.toggle() } }
+    @objc private func toggleScene(_ i: NSMenuItem) {
+        guard let name = i.representedObject as? String else { return }
+        let all = Set(overlay.pickableSceneNames)
+        settings.update { s in
+            if s.disabledScenes.contains(name) {
+                s.disabledScenes.remove(name)
+            } else {
+                // Never allow zero enabled scenes.
+                guard all.subtracting(s.disabledScenes).count > 1 else { return }
+                s.disabledScenes.insert(name)
+                if s.defaultScene == name,
+                   let fallback = all.subtracting(s.disabledScenes).sorted().first {
+                    s.defaultScene = fallback
+                }
+            }
+        }
+    }
     @objc private func toggleAutoShuffle() { settings.update { $0.autoShuffle.toggle() } }
     @objc private func toggleShake() { settings.update { $0.shakeToShuffle.toggle() } }
     @objc private func setShuffleInterval(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.shuffleInterval = v } } }
@@ -444,9 +472,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // working watchdog (the parent must always be able to get out). On failure we
         // bail before freezing the cursor / showing the overlay / setting armed.
         // The in-app session timer owns the CLEAN session end; the watchdog deadline
-        // runs 10s behind it as the SIGKILL backstop for a wedged app.
+        // runs 10s behind it as the SIGKILL backstop for a wedged app. 0 = NO LIMIT:
+        // no timer, no deadline — the heartbeat protection still guards lockout.
         let sessionSeconds = demoMax ?? settings.current.maxSessionSeconds
-        guard watchdog.arm(maxSeconds: sessionSeconds + 10) else {
+        guard watchdog.arm(maxSeconds: sessionSeconds == 0 ? 0 : sessionSeconds + 10) else {
             alert(title: "Can't start kid mode",
                   text: "The safety watchdog couldn't be engaged, so kid mode was not started — you must always be able to exit. Quit and relaunch kiddyproof.")
             return
@@ -459,11 +488,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         exitController.start()
         startSecurePoll()
         healthMonitor.start()
-        startSessionTimer(seconds: sessionSeconds)
+        if sessionSeconds > 0 { startSessionTimer(seconds: sessionSeconds) }
         engageKioskHardening()
         preventDisplaySleep()
 
-        NSLog("[kiddyproof] KID MODE ARMED (limit \(Int(sessionSeconds))s).")
+        NSLog("[kiddyproof] KID MODE ARMED (\(sessionSeconds > 0 ? "limit \(Int(sessionSeconds))s" : "no limit")).")
     }
 
     private func disarmKidMode(reason: String) {

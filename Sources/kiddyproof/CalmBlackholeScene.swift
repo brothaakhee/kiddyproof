@@ -8,7 +8,7 @@ import AppKit
 // it eats and is drawn as a real event horizon + accretion disk + photon ring.
 final class CalmBlackholeScene: Scene {
     let name = "Black Hole"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.none          // we draw the hole ourselves
     let veil: CGFloat = 0

@@ -8,7 +8,7 @@ import AppKit
 // split around the cursor's path and nearby petals are brushed aside. No veil.
 final class CalmPetalsScene: Scene {
     let name = "Petals"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

@@ -13,7 +13,7 @@ public struct KidSettings: Codable, Equatable {
 
     public var defaultScene: String
     public var kidSwitching: Bool          // may the kid change scenes (orb / shuffle / shake)
-    public var energeticEnabled: Bool      // include the opt-in higher-energy scenes
+    public var disabledScenes: Set<String> // parent-disabled scenes (empty = all enabled)
     public var autoShuffle: Bool
     public var shuffleInterval: Double     // seconds
     public var shakeToShuffle: Bool
@@ -24,16 +24,16 @@ public struct KidSettings: Codable, Equatable {
     public var adaptiveContrast: Bool      // opt-in: sample the desktop (Screen Recording) at arm
 
     public static let `default` = KidSettings(
-        defaultScene: "Black Hole", kidSwitching: true, energeticEnabled: false, autoShuffle: false,
+        defaultScene: "Black Hole", kidSwitching: true, disabledScenes: [], autoShuffle: false,
         shuffleInterval: 30, shakeToShuffle: true, audioEnabled: true, audioVolume: 0.8,
-        intensityCeiling: .balanced, maxSessionSeconds: 120, adaptiveContrast: false)
+        intensityCeiling: .balanced, maxSessionSeconds: 600, adaptiveContrast: false)
 
-    public init(defaultScene: String, kidSwitching: Bool, energeticEnabled: Bool, autoShuffle: Bool,
+    public init(defaultScene: String, kidSwitching: Bool, disabledScenes: Set<String>, autoShuffle: Bool,
                 shuffleInterval: Double, shakeToShuffle: Bool, audioEnabled: Bool, audioVolume: Double,
                 intensityCeiling: Ceiling, maxSessionSeconds: Double, adaptiveContrast: Bool) {
         self.defaultScene = defaultScene
         self.kidSwitching = kidSwitching
-        self.energeticEnabled = energeticEnabled
+        self.disabledScenes = disabledScenes
         self.autoShuffle = autoShuffle
         self.shuffleInterval = shuffleInterval
         self.shakeToShuffle = shakeToShuffle
@@ -52,7 +52,7 @@ public struct KidSettings: Codable, Equatable {
         let d = KidSettings.default
         defaultScene = try c.decodeIfPresent(String.self, forKey: .defaultScene) ?? d.defaultScene
         kidSwitching = try c.decodeIfPresent(Bool.self, forKey: .kidSwitching) ?? d.kidSwitching
-        energeticEnabled = try c.decodeIfPresent(Bool.self, forKey: .energeticEnabled) ?? d.energeticEnabled
+        disabledScenes = try c.decodeIfPresent(Set<String>.self, forKey: .disabledScenes) ?? d.disabledScenes
         autoShuffle = try c.decodeIfPresent(Bool.self, forKey: .autoShuffle) ?? d.autoShuffle
         shuffleInterval = try c.decodeIfPresent(Double.self, forKey: .shuffleInterval) ?? d.shuffleInterval
         shakeToShuffle = try c.decodeIfPresent(Bool.self, forKey: .shakeToShuffle) ?? d.shakeToShuffle
@@ -64,11 +64,15 @@ public struct KidSettings: Codable, Equatable {
     }
 
     // UserDefaults is user-writable and survives version changes — always clamp.
+    // maxSessionSeconds == 0 is the explicit NO-LIMIT sentinel (parent's choice;
+    // the watchdog's heartbeat protection still guards lockout).
     public func clamped() -> KidSettings {
         var s = self
         s.shuffleInterval = min(600, max(10, s.shuffleInterval))
         s.audioVolume = min(1, max(0, s.audioVolume))
-        s.maxSessionSeconds = min(1800, max(15, s.maxSessionSeconds))
+        if s.maxSessionSeconds != 0 {
+            s.maxSessionSeconds = min(3600, max(15, s.maxSessionSeconds))
+        }
         return s
     }
 }

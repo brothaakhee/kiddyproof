@@ -10,7 +10,7 @@ import AppKit
 // (Total rebuild of the old static radial "Spiderweb", which Constellation obsoleted.)
 final class CalmSpiderwebScene: Scene {
     let name = "Silk"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

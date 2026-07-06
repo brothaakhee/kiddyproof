@@ -89,7 +89,8 @@ final class OnboardingController: NSObject {
             A progress ring fills as you hold.
 
             Sessions also end on their own at the session limit (set it in Settings; \
-            2 minutes by default) — so a forgotten kid mode never runs all day.
+            10 minutes by default, or choose No Limit) — so a forgotten kid mode \
+            never runs all day unless you've asked it to.
             """,
             action: nil),
     ]

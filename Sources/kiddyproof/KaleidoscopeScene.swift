@@ -14,7 +14,7 @@ import AppKit
 // anchors the center. All elements are adaptive-contrast aware.
 final class KaleidoscopeScene: Scene {
     let name = "Kaleidoscope"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

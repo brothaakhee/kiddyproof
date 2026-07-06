@@ -15,7 +15,7 @@ import AppKit
 // a light-ripple outward. A hub jewel beats at the heart like an escapement.
 final class MusicBoxScene: Scene {
     let name = "Music Box"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

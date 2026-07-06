@@ -65,6 +65,16 @@ final class WatchdogCoreTests: XCTestCase {
         XCTAssertEqual(e.verdict(now: t1.addingTimeInterval(10), heartbeatGrace: grace), .killDeadline)
     }
 
+    // ARM 0 = no session limit: the deadline never fires, but heartbeat
+    // enforcement (the lockout protection) still kills a silent app.
+    func testNoLimitArmHasNoDeadlineButKeepsHeartbeat() {
+        var e = WatchdogCore.Enforcement(now: t0)
+        e.apply(.arm(maxSeconds: 0), now: t0)
+        e.apply(.ping, now: t0.addingTimeInterval(3600))
+        XCTAssertEqual(e.verdict(now: t0.addingTimeInterval(3601), heartbeatGrace: grace), .ok)
+        XCTAssertEqual(e.verdict(now: t0.addingTimeInterval(3610), heartbeatGrace: grace), .killHeartbeatLost)
+    }
+
     func testUnknownCommandIsInert() {
         var e = WatchdogCore.Enforcement(now: t0)
         e.apply(.arm(maxSeconds: 120), now: t0)

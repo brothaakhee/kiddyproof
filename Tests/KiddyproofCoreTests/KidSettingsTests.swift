@@ -10,8 +10,18 @@ final class KidSettingsTests: XCTestCase {
         XCTAssertEqual(KidSettings.default.defaultScene, "Black Hole")
     }
 
-    func testEnergeticScenesAreOptIn() {
-        XCTAssertFalse(KidSettings.default.energeticEnabled)
+    func testAllScenesEnabledByDefault() {
+        XCTAssertTrue(KidSettings.default.disabledScenes.isEmpty)
+    }
+
+    func testNoLimitSentinelSurvivesClamping() {
+        var s = KidSettings.default
+        s.maxSessionSeconds = 0
+        XCTAssertEqual(s.clamped().maxSessionSeconds, 0)
+    }
+
+    func testDefaultSessionLimitIsTenMinutes() {
+        XCTAssertEqual(KidSettings.default.maxSessionSeconds, 600)
     }
 
     func testClampingBounds() {
@@ -22,7 +32,7 @@ final class KidSettingsTests: XCTestCase {
         let c = s.clamped()
         XCTAssertEqual(c.shuffleInterval, 10)
         XCTAssertEqual(c.audioVolume, 1)
-        XCTAssertEqual(c.maxSessionSeconds, 1800)
+        XCTAssertEqual(c.maxSessionSeconds, 3600)
 
         s.shuffleInterval = 10_000
         s.audioVolume = -3
@@ -62,7 +72,7 @@ final class KidSettingsTests: XCTestCase {
     // defaults for the missing fields — never reset the parent's saved settings.
     func testLegacyPayloadDecodesWithDefaults() throws {
         let legacy = Data("""
-        {"defaultScene":"Ripples","kidSwitching":false,"energeticEnabled":true,
+        {"defaultScene":"Ripples","kidSwitching":false,"energeticEnabled":true,\n         "_note":"energeticEnabled is a retired v1 key and must be ignored",
          "autoShuffle":false,"shuffleInterval":45,"shakeToShuffle":false,
          "audioEnabled":true,"audioVolume":0.5,"intensityCeiling":"calm",
          "maxSessionSeconds":300}

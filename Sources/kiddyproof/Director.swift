@@ -12,9 +12,13 @@ final class Director {
     private var transitionStart: TimeInterval = 0
     private let duration: TimeInterval = 0.6
 
-    // Which categories the kid may cycle through (set from settings at arm). Calm-only
-    // by default; energetic scenes are opt-in.
-    var allowedCategories: Set<SceneCategory> = [.calm]
+    // Which scenes the kid may cycle through (set from settings at arm): the live,
+    // non-parent-disabled set. Nil = every live scene.
+    var enabledNames: Set<String>?
+
+    private func isAllowed(_ s: Scene) -> Bool {
+        s.category != .archived && (enabledNames?.contains(s.name) ?? true)
+    }
 
     // Progress of the running crossfade (0…1), updated once per frame in update().
     private var fadeProgress: CGFloat = 1
@@ -34,10 +38,14 @@ final class Director {
     var pickableNames: [String] { scenes.filter { $0.category != .archived }.map { $0.name } }  // parent-selectable
 
     // Pick the active scene with no crossfade — used once at arm, before any frame.
+    // A disabled/unknown default falls back to the first enabled scene.
     func select(named name: String) {
-        guard incoming == nil, let i = scenes.firstIndex(where: { $0.name == name }) else { return }
-        index = i
-        current = scenes[i]
+        guard incoming == nil else { return }
+        var i = scenes.firstIndex(where: { $0.name == name && isAllowed($0) })
+        if i == nil { i = scenes.firstIndex(where: { isAllowed($0) }) }
+        guard let idx = i else { return }
+        index = idx
+        current = scenes[idx]
         current.draining = false   // never trust a stale drain flag from a previous session
     }
 
@@ -62,7 +70,7 @@ final class Director {
         var nextIndex = index
         for step in 1...n {
             let cand = (index + step) % n
-            if cand != index, allowedCategories.contains(scenes[cand].category) { nextIndex = cand; break }
+            if cand != index, isAllowed(scenes[cand]) { nextIndex = cand; break }
         }
         guard nextIndex != index else { return }   // nothing else to switch to
         let next = scenes[nextIndex]

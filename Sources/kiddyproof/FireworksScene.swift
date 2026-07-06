@@ -9,7 +9,7 @@ import AppKit
 // as they burn out. bg = twinkling night sky over a deeper dusk veil.
 final class FireworksScene: Scene {
     let name = "Fireworks"
-    let category = SceneCategory.energetic
+    let category = SceneCategory.live
     let reactivity = Reactivity.energetic
     let skin = CursorSkin.comet
     let veil: CGFloat = 0.35          // a deeper dusk for firework contrast; desktop still visible

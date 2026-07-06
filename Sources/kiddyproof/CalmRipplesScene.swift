@@ -9,7 +9,7 @@ import AppKit
 // on any wallpaper — not chalk. No veil.
 final class CalmRipplesScene: Scene {
     let name = "Ripples"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

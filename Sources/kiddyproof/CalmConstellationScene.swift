@@ -14,7 +14,7 @@ import AppKit
 // is the proxy; KP_TESTBG=white/gray forces ink, KP_TESTBG=black forces starlight.)
 final class CalmConstellationScene: Scene {
     let name = "Constellation"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

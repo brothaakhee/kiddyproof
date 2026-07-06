@@ -190,9 +190,9 @@ func inkWeight(_ map: BackgroundLuminance?, _ fallback: CGFloat, _ p: NSPoint) -
     return t * t * (3 - 2 * t)
 }
 
-// Calm = the default soothing experience; energetic = opt-in higher-energy scenes;
-// archived = built but scrapped from the rotation (still previewable via KP_SCENE, never cycled).
-enum SceneCategory { case calm, energetic, archived }
+// live = made the cut, in the rotation (parents can disable individual scenes);
+// archived = built but scrapped (still previewable via KP_SCENE, never cycled).
+enum SceneCategory { case live, archived }
 
 // How a scene turns input rate into the 0…1 intensity that modulates its effects.
 // Calm scenes cap LOW with slow attack/decay so a frantic mash can never become busy;

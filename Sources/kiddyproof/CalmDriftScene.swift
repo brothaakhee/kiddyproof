@@ -8,7 +8,7 @@ import AppKit
 // and additively soft. Reactivity is capped low so a frantic mash never makes it busy.
 final class CalmDriftScene: Scene {
     let name = "Drift"
-    let category = SceneCategory.calm
+    let category = SceneCategory.live
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0             // no dimming — effects read on any wallpaper via contrast sprites

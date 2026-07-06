@@ -90,7 +90,7 @@ final class OverlayWindowManager: NSObject {
         cursorFX.reset(); mash.reset(); orb.reset(); director.reset()
         // Session-scoped settings: sampled ONCE at arm (snapshot under the lock).
         let s = state.read { $0.settings }
-        director.allowedCategories = s.energeticEnabled ? [.calm, .energetic] : [.calm]
+        director.enabledNames = Set(director.pickableNames).subtracting(s.disabledScenes)
         director.select(named: s.defaultScene)
         orb.enabled = s.kidSwitching
         audio.setEnabled(s.audioEnabled); audio.setVolume(Float(s.audioVolume))

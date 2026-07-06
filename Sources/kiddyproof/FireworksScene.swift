@@ -174,8 +174,8 @@ final class FireworksScene: Scene {
     private func detonate(_ shell: Shell, _ ctx: EffectContext) {
         // A crossette fragment pops as one small peony — and never re-splits.
         if shell.mini {
-            burstRing(shell.pos, n: 16, spd: 130...210, life: 0.5...0.9,
-                      size: 1.8...2.8, gravity: 300, drag: 0.6, color: shell.color, jitter: 0.5)
+            burstRing(shell.pos, n: 22, spd: 160...260, life: 0.5...0.9,
+                      size: 2.5...4, gravity: 300, drag: 0.6, color: shell.color, jitter: 0.5)
             if ctx.now - lastBoom > 0.06 { ctx.audio?.boom(intensity: 0.3); lastBoom = ctx.now }
             return
         }
@@ -183,22 +183,22 @@ final class FireworksScene: Scene {
         switch shell.kind {
         case .peony:
             burstRing(shell.pos, n: Int((60 + 80 * ctx.intensity) * boost),
-                      spd: 220...360, life: 0.8...1.4, size: 2...3.5,
+                      spd: 260...440, life: 0.8...1.4, size: 3...5,
                       gravity: 320, drag: 0.6, color: shell.color, jitter: 0.6)
         case .ring:
             // A crisp expanding circle: narrow speed band, no jitter.
-            burstRing(shell.pos, n: Int(90 * boost), spd: 300...330, life: 1.0...1.3,
-                      size: 2...3, gravity: 240, drag: 0.5, color: shell.color, jitter: 0.02)
+            burstRing(shell.pos, n: Int(90 * boost), spd: 360...395, life: 1.0...1.3,
+                      size: 3...4.5, gravity: 240, drag: 0.5, color: shell.color, jitter: 0.02)
         case .willow:
             // Long-lived golden strands that droop like the tree.
-            burstRing(shell.pos, n: Int(55 * boost), spd: 140...230, life: 1.9...2.6,
-                      size: 2.5...3.5, gravity: 480, drag: 0.35, color: 0, jitter: 0.4)
+            burstRing(shell.pos, n: Int(55 * boost), spd: 170...280, life: 1.9...2.6,
+                      size: 3.5...5, gravity: 480, drag: 0.35, color: 0, jitter: 0.4)
         case .palm:
             // A few thick rising arms + a soft fill.
-            burstRing(shell.pos, n: Int(11 * boost), spd: 280...360, life: 1.2...1.6,
-                      size: 5...6.5, gravity: 380, drag: 0.5, color: 1, jitter: 0.1)
-            burstRing(shell.pos, n: Int(26 * boost), spd: 90...170, life: 0.8...1.2,
-                      size: 2...3, gravity: 300, drag: 0.7, color: 1, jitter: 0.8)
+            burstRing(shell.pos, n: Int(11 * boost), spd: 330...430, life: 1.2...1.6,
+                      size: 6.5...9, gravity: 380, drag: 0.5, color: 1, jitter: 0.1)
+            burstRing(shell.pos, n: Int(26 * boost), spd: 110...210, life: 0.8...1.2,
+                      size: 3...4.5, gravity: 300, drag: 0.7, color: 1, jitter: 0.8)
         case .crossette:
             // Split into a volley of mini-shells that pop on their own fuses.
             for _ in 0..<Int(9 * boost) {
@@ -212,13 +212,13 @@ final class FireworksScene: Scene {
             }
         case .strobe:
             // A hanging cloud of white strobes: quick stop, long twinkle.
-            burstRing(shell.pos, n: Int(55 * boost), spd: 150...280, life: 1.4...2.0,
-                      size: 2...3, gravity: 140, drag: 1.3, color: 6, jitter: 0.9)
+            burstRing(shell.pos, n: Int(55 * boost), spd: 190...340, life: 1.4...2.0,
+                      size: 3...4.5, gravity: 140, drag: 1.3, color: 6, jitter: 0.9)
         }
         // Charged rounds fire a second, faster wave for the double-ring look.
         if shell.power > 0.55, shell.kind != .crossette {
-            burstRing(shell.pos, n: Int(70 * shell.power), spd: 420...520, life: 0.7...1.1,
-                      size: 2...3, gravity: 300, drag: 0.65,
+            burstRing(shell.pos, n: Int(70 * shell.power), spd: 480...600, life: 0.7...1.1,
+                      size: 3...4.5, gravity: 300, drag: 0.65,
                       color: UInt8(rng.int(Self.palette.colors.count)), jitter: 0.15)
         }
         if ctx.now - lastBoom > 0.06 {

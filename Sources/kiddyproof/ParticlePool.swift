@@ -85,26 +85,31 @@ final class ParticlePool {
         paths.reserveCapacity(64)
         for i in 0..<count {
             let p = items[i]
-            var frac = max(0, 1 - CGFloat((now - p.birth) / p.life))     // 1→0 over life
-            if p.flicker {
-                // Burning-spark strobe, phase-keyed off birth so each spark twinkles
-                // on its own clock.
-                frac *= 0.55 + 0.45 * CGFloat(sin(now * 21 + p.birth * 977))
-            }
-            let alphaQ = min(7, Int(max(0, frac) * 7.999))
-            let r = p.size * (0.35 + 0.65 * frac)                        // shrink as it dies
+            let lifeFrac = max(0, 1 - CGFloat((now - p.birth) / p.life)) // 1→0 over life
+            // SIZE and the draw-cull use the smooth life fraction ONLY — flickering
+            // the size made deep dips fall under the cull and sparks blinked out of
+            // existence for whole frames (visible chop as bursts decayed).
+            let r = p.size * (0.35 + 0.65 * lifeFrac)                    // shrink as it dies
             if r < 0.4 { continue }
-            let key = Int(p.color) * 16 + alphaQ * 2 + (p.additive ? 1 : 0)
+            var alphaFrac = lifeFrac
+            if p.flicker {
+                // Shallow burning-spark twinkle, phase-keyed off birth: brightness
+                // shimmers, but a spark never vanishes mid-life.
+                alphaFrac *= 0.72 + 0.28 * CGFloat(sin(now * 14 + p.birth * 977))
+            }
+            // 16 alpha levels: 8 visibly stair-stepped on second-long fades.
+            let alphaQ = min(15, Int(max(0, alphaFrac) * 15.999))
+            let key = (Int(p.color) * 32 + alphaQ) * 2 + (p.additive ? 1 : 0)
             let path = paths[key] ?? { let m = CGMutablePath(); paths[key] = m; return m }()
             let x = p.pos.x - origin.x, y = p.pos.y - origin.y
             path.addEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2))
         }
         for (key, path) in paths {
-            let color = Int(key / 16)
-            let alphaQ = (key % 16) / 2
             let additive = (key % 2) == 1
+            let color = key / 64
+            let alphaQ = (key / 2) % 32
             ctx.setBlendMode(additive ? .plusLighter : .normal)
-            let a = CGFloat(alphaQ + 1) / 8.0
+            let a = CGFloat(alphaQ + 1) / 16.0
             ctx.setFillColor(palette.colors[color % palette.colors.count].copy(alpha: a)!)
             ctx.addPath(path)
             ctx.fillPath()

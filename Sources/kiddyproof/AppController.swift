@@ -114,20 +114,38 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             guard let self = self else { return }
             self.armKidMode()
-            guard self.state.isArmed() else {
-                NSLog("[kiddyproof] demo: failed to arm; quitting."); NSApp.terminate(nil); return
-            }
-            self.driveDemoEffects()
-            // Show the live scene switch partway through — unless previewing one scene.
-            if ProcessInfo.processInfo.environment["KP_SCENE"] == nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + seconds * 0.5) { [weak self] in
-                    self?.overlay.requestSceneSwitch()
+            // Arming is ASYNC when adaptive contrast captures the desktop first —
+            // wait (bounded) for the commit instead of checking synchronously.
+            self.awaitArmed(deadline: 2.5) { armed in
+                guard armed else {
+                    NSLog("[kiddyproof] demo: failed to arm; quitting."); NSApp.terminate(nil); return
                 }
+                self.continueDemo(seconds: seconds)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
-                self?.disarmKidMode(reason: "demo end")
-                NSApp.terminate(nil)
+        }
+    }
+
+    private func awaitArmed(deadline: TimeInterval, _ completion: @escaping (Bool) -> Void) {
+        let start = ProcessInfo.processInfo.systemUptime
+        func poll() {
+            if state.isArmed() { completion(true); return }
+            if ProcessInfo.processInfo.systemUptime - start > deadline { completion(false); return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { poll() }
+        }
+        poll()
+    }
+
+    private func continueDemo(seconds: Double) {
+        driveDemoEffects()
+        // Show the live scene switch partway through — unless previewing one scene.
+        if ProcessInfo.processInfo.environment["KP_SCENE"] == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds * 0.5) { [weak self] in
+                self?.overlay.requestSceneSwitch()
             }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            self?.disarmKidMode(reason: "demo end")
+            NSApp.terminate(nil)
         }
     }
 

@@ -42,6 +42,7 @@ final class KidAudio {
 
     private var notes: [AVAudioPCMBuffer] = []
     private var drips: [AVAudioPCMBuffer] = []      // water droplets (Ripples' click voice)
+    private var plucks: [AVAudioPCMBuffer] = []     // silk strings (Silk's pluck voice)
     private var bonkBuf, boomBuf, whooshBuf, burstBuf, glimmerBuf, pingBuf, droneBuf, vacuumBuf: AVAudioPCMBuffer?
     private var rng = RNG(seed: 0xA0D10)
 
@@ -162,6 +163,11 @@ final class KidAudio {
     func glimmer() { if let b = glimmerBuf, !throttled(6, 0.12) { play(b, gain: 0.4) } }
     // A crystalline starlight ping — Constellation's pulse voice.
     func ping() { if let b = pingBuf, !throttled(7, 0.1) { play(b, gain: 0.34) } }
+    // A plucked silk string — the Silk scene's voice. Random pitch per pluck.
+    func pluck(intensity: CGFloat = 1) {
+        guard !plucks.isEmpty, !throttled(8, 0.07) else { return }
+        play(plucks[rng.int(plucks.count)], gain: 0.28 + 0.3 * Float(clamp01(intensity)))
+    }
 
     // MARK: Internals
 
@@ -191,6 +197,7 @@ final class KidAudio {
         burstBuf = makeBurst(); glimmerBuf = makeGlimmer(); pingBuf = makePing()
         droneBuf = makeDrone(); vacuumBuf = makeVacuum()
         drips = [420.0, 540.0, 660.0, 800.0].map { makeDrip(freq: $0) }
+        plucks = [329.63, 392.0, 440.0, 523.25].map { makePluck(freq: $0) }   // E4 G4 A4 C5
     }
 
     // loop=true → no head/tail fade (callers ensure seamless waveforms).
@@ -250,6 +257,28 @@ final class KidAudio {
             return Float(0.34 * env * s)
         }!
     }
+    // A plucked string: harmonics decaying faster the higher they are (the signature
+    // of real plucked strings — bright at the attack, mellowing as it rings), with a
+    // tiny pick transient. Gentle, harp-like, nothing percussive.
+    private func makePluck(freq f: Double) -> AVAudioPCMBuffer {
+        var r = RNG(seed: UInt64(f) &* 7)
+        let tau = 2.0 * Double.pi
+        return makeBuffer(0.9) { _, t in
+            let attack: Double = t < 0.002 ? t / 0.002 : 1
+            var s: Double = 0
+            for h in 1...5 {
+                let hd = Double(h)
+                let tone: Double = sin(tau * f * hd * t)
+                let level: Double = 1.0 / pow(hd, 1.3)
+                let decay: Double = exp(-t * (2.5 + hd * 2.2))
+                s += tone * level * decay
+            }
+            let noise = Double(r.unit()) * 2 - 1
+            s += noise * exp(-t * 220) * 0.15   // pick transient
+            return Float(0.2 * attack * s)
+        }!
+    }
+
     // A starlight ping: one pure high tone with a whisper of detune shimmer — brief,
     // crystalline, immediately distinct from the glass glimmer's bell.
     private func makePing() -> AVAudioPCMBuffer {

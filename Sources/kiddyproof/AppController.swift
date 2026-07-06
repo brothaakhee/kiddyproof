@@ -234,6 +234,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
                            current: s.shuffleInterval, sel: #selector(setShuffleInterval(_:))))
         menu.addItem(check("Shake to Shuffle", #selector(toggleShake), on: s.shakeToShuffle))
         menu.addItem(.separator())
+        let adaptive = check("Adaptive Contrast (Screen Recording)", #selector(toggleAdaptive), on: s.adaptiveContrast)
+        if s.adaptiveContrast && !BackgroundSampler.hasPermission() {
+            adaptive.title = "Adaptive Contrast (permission needed — relaunch after granting)"
+        }
+        menu.addItem(adaptive)
+        menu.addItem(.separator())
         menu.addItem(check("Sound", #selector(toggleAudio), on: s.audioEnabled))
         menu.addItem(radio("Volume", [("25%", 0.25), ("50%", 0.5), ("75%", 0.75), ("100%", 1.0)],
                            current: s.audioVolume, sel: #selector(setVolume(_:))))
@@ -283,6 +289,24 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleShake() { settings.update { $0.shakeToShuffle.toggle() } }
     @objc private func setShuffleInterval(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.shuffleInterval = v } } }
     @objc private func toggleAudio() { settings.update { $0.audioEnabled.toggle() } }
+    @objc private func toggleAdaptive() {
+        settings.update { $0.adaptiveContrast.toggle() }
+        if settings.current.adaptiveContrast && !BackgroundSampler.hasPermission() {
+            BackgroundSampler.requestPermission()   // one-time system prompt / listing
+            alert(title: "One more step for Adaptive Contrast",
+                  text: """
+                  Allow kiddyproof under System Settings ▸ Privacy & Security ▸ Screen \
+                  Recording, then QUIT and RELAUNCH kiddyproof (macOS applies the \
+                  permission only to a freshly launched app).
+
+                  What it's for: one low-resolution snapshot of your frozen desktop each \
+                  time kid mode starts, so the effects can pick bold ink over bright \
+                  windows and glowing light over dark ones. Nothing is recorded, stored, \
+                  or sent — the snapshot never leaves the effects engine. Kid mode works \
+                  fine without it.
+                  """)
+        }
+    }
     @objc private func setVolume(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.audioVolume = v } } }
     @objc private func setSession(_ i: NSMenuItem) { if let v = i.representedObject as? Double { settings.update { $0.maxSessionSeconds = v } } }
     @objc private func setCeiling(_ i: NSMenuItem) {
@@ -369,6 +393,35 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
             $0.leftButtonDown = false
         }
 
+        // Adaptive contrast (opt-in): sample the frozen desktop ONCE before the
+        // overlay covers it, then continue arming. Bounded: whichever of the capture
+        // or a 0.7s deadline lands first completes the arm; failure just means the
+        // session runs on the appearance proxy. KP_TESTBG paints over the desktop, so
+        // sampling would lie — skip it there.
+        if settings.current.adaptiveContrast, BackgroundSampler.hasPermission(),
+           ProcessInfo.processInfo.environment["KP_TESTBG"] == nil {
+            var completed = false
+            let finish: (BackgroundLuminance?) -> Void = { [weak self] map in
+                DispatchQueue.main.async {
+                    guard let self = self, !completed else { return }
+                    completed = true
+                    self.commitArm(background: map)
+                }
+            }
+            BackgroundSampler.capture(completion: finish)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { finish(nil) }
+        } else {
+            commitArm(background: nil)
+        }
+    }
+
+    // The commit half of arming — runs after the (optional) background capture.
+    private func commitArm(background: BackgroundLuminance?) {
+        // The capture window is async: re-check the two states that could have
+        // changed underneath it.
+        guard !state.isArmed() else { return }
+        if SecureInputGuard.isActive() { return }
+
         // Engage the failsafe FIRST and gate on it: never enter kid mode without a
         // working watchdog (the parent must always be able to get out). On failure we
         // bail before freezing the cursor / showing the overlay / setting armed.
@@ -382,6 +435,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         CursorController.freezeAndHide()
+        overlay.backgroundMap = background
         overlay.show()
         state.setArmed(true)
         exitController.start()

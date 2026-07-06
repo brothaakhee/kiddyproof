@@ -42,7 +42,7 @@ final class KidAudio {
 
     private var notes: [AVAudioPCMBuffer] = []
     private var drips: [AVAudioPCMBuffer] = []      // water droplets (Ripples' click voice)
-    private var bonkBuf, boomBuf, whooshBuf, burstBuf, glimmerBuf, droneBuf, vacuumBuf: AVAudioPCMBuffer?
+    private var bonkBuf, boomBuf, whooshBuf, burstBuf, glimmerBuf, pingBuf, droneBuf, vacuumBuf: AVAudioPCMBuffer?
     private var rng = RNG(seed: 0xA0D10)
 
     private var lastPlay: [Int: TimeInterval] = [:]
@@ -160,6 +160,8 @@ final class KidAudio {
     }
     // A soft glass chime — Drift's light wave rolling through the fireflies.
     func glimmer() { if let b = glimmerBuf, !throttled(6, 0.12) { play(b, gain: 0.4) } }
+    // A crystalline starlight ping — Constellation's pulse voice.
+    func ping() { if let b = pingBuf, !throttled(7, 0.1) { play(b, gain: 0.34) } }
 
     // MARK: Internals
 
@@ -186,7 +188,7 @@ final class KidAudio {
         let pent: [Double] = [261.63, 293.66, 329.63, 392.00, 440.00]
         notes = (pent + pent.map { $0 * 2 }).map { makeNote(freq: $0) }
         bonkBuf = makeBonk(); boomBuf = makeBoom(); whooshBuf = makeWhoosh()
-        burstBuf = makeBurst(); glimmerBuf = makeGlimmer()
+        burstBuf = makeBurst(); glimmerBuf = makeGlimmer(); pingBuf = makePing()
         droneBuf = makeDrone(); vacuumBuf = makeVacuum()
         drips = [420.0, 540.0, 660.0, 800.0].map { makeDrip(freq: $0) }
     }
@@ -248,6 +250,21 @@ final class KidAudio {
             return Float(0.34 * env * s)
         }!
     }
+    // A starlight ping: one pure high tone with a whisper of detune shimmer — brief,
+    // crystalline, immediately distinct from the glass glimmer's bell.
+    private func makePing() -> AVAudioPCMBuffer {
+        let tau = 2.0 * Double.pi
+        let f = 1318.5   // E6
+        return makeBuffer(0.55) { _, t in
+            let attack: Double = t < 0.004 ? t / 0.004 : 1
+            let env = attack * exp(-t * 7.5)
+            var s = sin(tau * f * t) * 0.75
+            s += sin(tau * (f * 1.006) * t) * 0.25       // detune shimmer
+            s += sin(tau * f * 3 * t) * 0.06 * exp(-t * 16)
+            return Float(0.14 * env * s)
+        }!
+    }
+
     // A water droplet: the physics of a real drop is a tiny impact tick followed by a
     // resonating bubble whose pitch RISES as it collapses — a sine chirp (f0 → ~2.2·f0)
     // with a fast decay nails the familiar "bloop". The reverb gives it the pond.

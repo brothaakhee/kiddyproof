@@ -50,6 +50,11 @@ final class OverlayWindowManager: NSObject {
 
     private var simBounds: CGRect = .zero
 
+    // Adaptive contrast: set by the arm sequence BEFORE show() when the parent has
+    // opted in + granted Screen Recording; nil otherwise. Session-static.
+    var backgroundMap: BackgroundLuminance?
+    private var fallbackLightness: CGFloat = 0.3
+
     override init() {
         super.init()
         audio.boot()   // build the audio graph once at launch for zero arm-latency
@@ -72,6 +77,15 @@ final class OverlayWindowManager: NSObject {
         // is seamless across displays and the cursor's hole follows it onto any monitor.
         simBounds = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
         if simBounds.isEmpty { simBounds = primaryScreen()?.frame ?? .zero }
+        // No luminance map (or KP_TESTBG painting over the desktop): one proxy value
+        // for the whole session — system light mode reads as a light background.
+        switch ProcessInfo.processInfo.environment["KP_TESTBG"] {
+        case "white": fallbackLightness = 0.92; backgroundMap = nil
+        case "gray": fallbackLightness = 0.55; backgroundMap = nil
+        case "black": fallbackLightness = 0.08; backgroundMap = nil
+        default:
+            fallbackLightness = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua ? 0.7 : 0.15
+        }
         cursorFX.reset(); mash.reset(); orb.reset(); director.reset()
         // Session-scoped settings: sampled ONCE at arm (snapshot under the lock).
         let s = state.read { $0.settings }
@@ -101,6 +115,7 @@ final class OverlayWindowManager: NSObject {
     func hide() {
         audio.setEnabled(false)        // silence AND pause the whole engine when kid mode ends
         renderTimer?.invalidate(); renderTimer = nil
+        backgroundMap = nil            // the desktop unfreezes; the sample is stale
         for p in panels { p.orderOut(nil) }
         panels.removeAll(); views.removeAll()
     }
@@ -188,7 +203,8 @@ final class OverlayWindowManager: NSObject {
         let ctx = EffectContext(dt: CGFloat(dt), now: now, intensity: mash.intensity,
                                 bounds: simBounds, cursor: cursor,
                                 cursorVel: cursorFX.currentVelocity, leftButtonDown: snap.4,
-                                audio: audio.enabled ? audio : nil)
+                                audio: audio.enabled ? audio : nil,
+                                background: backgroundMap, fallbackLightness: fallbackLightness)
 
         // Single drain → split orb taps from scene events.
         var taps: [NSPoint] = []

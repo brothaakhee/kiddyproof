@@ -57,4 +57,19 @@ final class KidSettingsTests: XCTestCase {
         let corrupt = Data("{\"defaultScene\": 42}".utf8)
         XCTAssertThrowsError(try JSONDecoder().decode(KidSettings.self, from: corrupt))
     }
+
+    // A payload saved by an OLDER app version (missing newer keys) must decode with
+    // defaults for the missing fields — never reset the parent's saved settings.
+    func testLegacyPayloadDecodesWithDefaults() throws {
+        let legacy = Data("""
+        {"defaultScene":"Ripples","kidSwitching":false,"energeticEnabled":true,
+         "autoShuffle":false,"shuffleInterval":45,"shakeToShuffle":false,
+         "audioEnabled":true,"audioVolume":0.5,"intensityCeiling":"calm",
+         "maxSessionSeconds":300}
+        """.utf8)
+        let s = try JSONDecoder().decode(KidSettings.self, from: legacy)
+        XCTAssertEqual(s.defaultScene, "Ripples")
+        XCTAssertEqual(s.maxSessionSeconds, 300)
+        XCTAssertFalse(s.adaptiveContrast)   // new field → its default
+    }
 }

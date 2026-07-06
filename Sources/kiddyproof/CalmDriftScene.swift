@@ -64,9 +64,15 @@ final class CalmDriftScene: Scene {
         NSColor(srgbRed: 1.0, green: 0.55, blue: 0.72, alpha: 1),   // rose
         NSColor(srgbRed: 0.72, green: 0.60, blue: 1.0, alpha: 1),   // lavender
     ]
-    // Contrast cores (readable on any wallpaper) + additive glows (extra pop on dark).
+    // Contrast cores (readable on any wallpaper) + additive glows (extra pop on dark)
+    // + a dark breath drawn behind fireflies over BRIGHT pixels (adaptive contrast).
     private static let cores: [CGImage] = swatches.map { softContrastSprite($0) }
     private static let glows: [CGImage] = swatches.map { softGlowSprite($0) }
+    private static let dark = inkSprite(NSColor(white: 0, alpha: 1))
+
+    // Adaptive contrast cache (set each update; draw() has no context).
+    private var bgMap: BackgroundLuminance?
+    private var bgFallback: CGFloat = 0.3
 
     // The gathering hold drives a soft continuous hum (same channel the black hole
     // swells, at a fraction of its level — a whisper, not suction).
@@ -144,6 +150,7 @@ final class CalmDriftScene: Scene {
 
     func update(_ ctx: EffectContext) {
         seedIfNeeded(ctx.bounds)
+        bgMap = ctx.background; bgFallback = ctx.fallbackLightness
         let dt = ctx.dt
         let cur = ctx.cursor
 
@@ -263,15 +270,25 @@ final class CalmDriftScene: Scene {
     func liveCount() -> Int { orbs.count + pulses.count }
 
     // Each glow is two passes: a contrast core (normal blend, reads on any wallpaper)
-    // and an additive bloom (extra glow on dark, harmless on light).
-    private func blit(_ ctx: CGContext, _ color: Int, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ a: CGFloat) {
+    // and an additive bloom (extra glow on dark, harmless on light). With adaptive
+    // contrast, `w` (ink weight of the pixels BEHIND this firefly) grounds it over
+    // bright windows: a soft dark breath appears beneath and the useless glow fades.
+    private func blit(_ ctx: CGContext, _ color: Int, _ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ a: CGFloat, _ w: CGFloat) {
         let core = Self.cores[color % Self.cores.count]
         let glow = Self.glows[color % Self.glows.count]
+        if w > 0.05 {
+            ctx.setBlendMode(.normal); ctx.setAlpha(a * 0.55 * w)
+            let dr = r * 1.3
+            ctx.draw(Self.dark, in: CGRect(x: cx - dr, y: cy - dr, width: dr * 2, height: dr * 2))
+        }
         ctx.setBlendMode(.normal); ctx.setAlpha(a)
         ctx.draw(core, in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
-        ctx.setBlendMode(.plusLighter); ctx.setAlpha(a * 0.5)
-        let gr = r * 1.25
-        ctx.draw(glow, in: CGRect(x: cx - gr, y: cy - gr, width: gr * 2, height: gr * 2))
+        let ga = a * 0.5 * (1 - 0.8 * w)
+        if ga > 0.01 {
+            ctx.setBlendMode(.plusLighter); ctx.setAlpha(ga)
+            let gr = r * 1.25
+            ctx.draw(glow, in: CGRect(x: cx - gr, y: cy - gr, width: gr * 2, height: gr * 2))
+        }
     }
 
     func draw(into ctx: CGContext, bounds: CGRect, origin: CGPoint) {
@@ -284,7 +301,8 @@ final class CalmDriftScene: Scene {
             let t = CGFloat((now - p.birth) / 0.55)
             guard t < 1 else { continue }
             let a = (1 - t) * (1 - t) * 0.55
-            blit(ctx, p.color, p.pos.x - origin.x, p.pos.y - origin.y, 20 + t * 26, a)
+            blit(ctx, p.color, p.pos.x - origin.x, p.pos.y - origin.y, 20 + t * 26, a,
+                 inkWeight(bgMap, bgFallback, p.pos))
         }
         ctx.setBlendMode(.normal); ctx.setAlpha(1)
 
@@ -319,7 +337,8 @@ final class CalmDriftScene: Scene {
             a = max(a, wave * 0.85)
             guard a > 0.01 else { continue }
             let r = o.radius * (1 + 0.18 * o.gather + 0.3 * wave)
-            blit(ctx, o.color, o.pos.x - origin.x, o.pos.y - origin.y, r, a)
+            blit(ctx, o.color, o.pos.x - origin.x, o.pos.y - origin.y, r, a,
+                 inkWeight(bgMap, bgFallback, o.pos))
         }
 
         ctx.setAlpha(1)

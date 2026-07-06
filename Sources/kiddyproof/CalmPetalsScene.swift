@@ -60,6 +60,10 @@ final class CalmPetalsScene: Scene {
     // The whirlwind breathes through the shared hum channel — a soft wind roar.
     var audioSwell: CGFloat { holdLevel * 0.35 }
 
+    // Adaptive contrast cache (set each update; draw() has no context).
+    private var bgMap: BackgroundLuminance?
+    private var bgFallback: CGFloat = 0.3
+
     func reset() {
         petals.removeAll(keepingCapacity: true); seededSize = .zero
         wisps.removeAll(keepingCapacity: true); lastWakePos = .zero; jetAudible = false
@@ -121,6 +125,7 @@ final class CalmPetalsScene: Scene {
 
     func update(_ ctx: EffectContext) {
         seedIfNeeded(ctx.bounds)
+        bgMap = ctx.background; bgFallback = ctx.fallbackLightness
         let dt = ctx.dt
         let now = ctx.now
         wind *= exp(-dt / 2.4)
@@ -244,17 +249,20 @@ final class CalmPetalsScene: Scene {
             let flip = 0.35 + 0.65 * abs(sin(p.flip))
             let w = p.size * 1.25, h = p.size * 0.7 * flip
             let shade = 0.75 + 0.25 * flip                       // slightly dimmer edge-on
+            // Adaptive: over bright pixels the dark edge firms up and the body gets a
+            // densifying second stamp; over dark ones the petal stays airy.
+            let iw = inkWeight(bgMap, bgFallback, p.pos)
             ctx.saveGState()
             ctx.translateBy(x: p.pos.x - origin.x, y: p.pos.y - origin.y)
             ctx.rotate(by: p.angle)
-            ctx.setAlpha(0.5)
+            ctx.setAlpha(0.3 + 0.35 * iw)
             ctx.draw(Self.inkDark, in: CGRect(x: -w * 0.6, y: -h * 0.62, width: w * 1.2, height: h * 1.24))
-            // Double-stamp the body: the soft ink gradient alone is too translucent to
-            // hold its color over a bright wallpaper.
             ctx.setAlpha(0.92 * shade)
             ctx.draw(Self.inkStamps[p.color % Self.inkStamps.count], in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
-            ctx.setAlpha(0.55 * shade)
-            ctx.draw(Self.inkStamps[p.color % Self.inkStamps.count], in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+            if iw > 0.05 {   // densify: soft ink alone can't hold color over white
+                ctx.setAlpha(0.6 * shade * iw)
+                ctx.draw(Self.inkStamps[p.color % Self.inkStamps.count], in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+            }
             ctx.setAlpha(0.6 * shade)                            // tip highlight → teardrop
             let tw = w * 0.5
             ctx.draw(Self.inkStamps[p.color % Self.inkStamps.count], in: CGRect(x: w * 0.18 - tw / 2, y: -h * 0.4, width: tw, height: h * 0.8))
@@ -277,11 +285,12 @@ final class CalmPetalsScene: Scene {
             let r = w.r0 + w.grow * t
             // Whispy: each puff is STRETCHED along the direction of travel, so the
             // dense overlapping chain reads as continuous vapor filaments, not dots.
+            let iw = inkWeight(bgMap, bgFallback, w.pos)
             ctx.saveGState()
             ctx.translateBy(x: w.pos.x - origin.x, y: w.pos.y - origin.y)
             ctx.rotate(by: atan2(w.dir.y, w.dir.x))
             let lw = r * 2.8, lh = r * 1.0
-            ctx.setAlpha(a * 0.5)    // soft dark breath beneath, so it reads on white
+            ctx.setAlpha(a * (0.25 + 0.5 * iw))   // dark breath firms up over bright pixels
             ctx.draw(Self.inkDark, in: CGRect(x: -lw * 0.56, y: -lh * 0.6, width: lw * 1.12, height: lh * 1.2))
             ctx.setAlpha(a)
             ctx.draw(Self.wispStamp, in: CGRect(x: -lw / 2, y: -lh / 2, width: lw, height: lh))

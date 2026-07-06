@@ -44,8 +44,13 @@ final class CalmRipplesScene: Scene {
     private static let glintColor = NSColor(srgbRed: 0.55, green: 0.88, blue: 1.0, alpha: 1)
     private static let glintCore = softContrastSprite(glintColor)
     private static let glintGlow = softGlowSprite(glintColor)
+    private static let glintDark = inkSprite(NSColor(white: 0, alpha: 1))
 
     var audioSwell: CGFloat { holdLevel * 0.25 }
+
+    // Adaptive contrast cache (set each update; draw() has no context).
+    private var bgMap: BackgroundLuminance?
+    private var bgFallback: CGFloat = 0.3
 
     func reset() {
         ripples.removeAll(keepingCapacity: true); ambientAccum = 0
@@ -89,6 +94,7 @@ final class CalmRipplesScene: Scene {
 
     func update(_ ctx: EffectContext) {
         let now = ctx.now
+        bgMap = ctx.background; bgFallback = ctx.fallbackLightness
         storm *= exp(-CGFloat(ctx.dt) / 10)   // weather eases back to a drizzle
 
         // Fingertip hold: heartbeat rings from the resting point.
@@ -134,18 +140,23 @@ final class CalmRipplesScene: Scene {
 
     // A bolder sibling of strokeContrast for water rings: wide deep-toned colored
     // casing (reads as saturated ink on light wallpaper) beneath a bright crest core
-    // (carries the glow on dark wallpaper).
-    private func waterStroke(_ ctx: CGContext, _ path: CGPath, width: CGFloat, alpha: CGFloat, color: NSColor) {
+    // (carries the glow on dark wallpaper). With adaptive contrast, `w` tunes the
+    // ring for the pixels behind it: over bright windows the casing deepens and the
+    // crest drops its white lift (pure saturated ink); over dark ones the casing
+    // recedes and the crest brightens.
+    private func waterStroke(_ ctx: CGContext, _ path: CGPath, width: CGFloat, alpha: CGFloat, color: NSColor, _ w: CGFloat) {
         guard alpha > 0.01 else { return }
         ctx.setBlendMode(.normal)
         ctx.setLineCap(.round)
         ctx.addPath(path)
         ctx.setLineWidth(width + 3.0)
-        ctx.setStrokeColor(blendColor(color, .black, 0.5).withAlphaComponent(min(1, alpha * 0.85)).cgColor)
+        ctx.setStrokeColor(blendColor(color, .black, 0.4 + 0.25 * w)
+            .withAlphaComponent(min(1, alpha * (0.6 + 0.4 * w))).cgColor)
         ctx.strokePath()
         ctx.addPath(path)
         ctx.setLineWidth(width)
-        ctx.setStrokeColor(blendColor(color, .white, 0.3).withAlphaComponent(min(1, alpha)).cgColor)
+        ctx.setStrokeColor(blendColor(color, .white, 0.42 * (1 - w))
+            .withAlphaComponent(min(1, alpha)).cgColor)
         ctx.strokePath()
     }
 
@@ -175,15 +186,16 @@ final class CalmRipplesScene: Scene {
             // The casing is a DEEP version of the ripple's own color — bold ink on a
             // light wallpaper (a translucent black outline just fades there), while on
             // dark it recedes and the bright core carries the glow.
+            let w = inkWeight(bgMap, bgFallback, r.center)
             let crestW = r.width * (2.6 - 1.4 * t)
             let crest = CGPath(ellipseIn: CGRect(x: cx - radius, y: cy - radius,
                                                  width: radius * 2, height: radius * 2), transform: nil)
-            waterStroke(ctx, crest, width: crestW, alpha: a, color: color)
+            waterStroke(ctx, crest, width: crestW, alpha: a, color: color, w)
             let echoR = radius * 0.84
             if echoR > 3 {
                 let echo = CGPath(ellipseIn: CGRect(x: cx - echoR, y: cy - echoR,
                                                     width: echoR * 2, height: echoR * 2), transform: nil)
-                waterStroke(ctx, echo, width: crestW * 0.6, alpha: a * 0.5, color: color)
+                waterStroke(ctx, echo, width: crestW * 0.6, alpha: a * 0.5, color: color, w)
             }
 
             // Impact dimple: a soft glow right after the drop lands, gone in a blink.
@@ -228,12 +240,21 @@ final class CalmRipplesScene: Scene {
                 guard glow > 0.05 else { continue }
                 for s in [CGFloat(1), -1] {
                     let gx = mx + px * s - origin.x, gy = my + py * s - origin.y
+                    let iw = inkWeight(bgMap, bgFallback, NSPoint(x: mx + px * s, y: my + py * s))
                     let gr: CGFloat = 7
+                    if iw > 0.05 {   // ground the sparkle over bright pixels
+                        ctx.setBlendMode(.normal); ctx.setAlpha(glow * 0.5 * iw)
+                        let dr = gr * 1.4
+                        ctx.draw(Self.glintDark, in: CGRect(x: gx - dr, y: gy - dr, width: dr * 2, height: dr * 2))
+                    }
                     ctx.setBlendMode(.normal); ctx.setAlpha(glow * 0.8)
                     ctx.draw(Self.glintCore, in: CGRect(x: gx - gr, y: gy - gr, width: gr * 2, height: gr * 2))
-                    ctx.setBlendMode(.plusLighter); ctx.setAlpha(glow * 0.55)
-                    let hr = gr * 1.7
-                    ctx.draw(Self.glintGlow, in: CGRect(x: gx - hr, y: gy - hr, width: hr * 2, height: hr * 2))
+                    let ga = glow * 0.55 * (1 - 0.7 * iw)
+                    if ga > 0.02 {
+                        ctx.setBlendMode(.plusLighter); ctx.setAlpha(ga)
+                        let hr = gr * 1.7
+                        ctx.draw(Self.glintGlow, in: CGRect(x: gx - hr, y: gy - hr, width: hr * 2, height: hr * 2))
+                    }
                 }
             }
         }

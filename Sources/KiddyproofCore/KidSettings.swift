@@ -21,15 +21,16 @@ public struct KidSettings: Codable, Equatable {
     public var audioVolume: Double         // 0…1
     public var intensityCeiling: Ceiling
     public var maxSessionSeconds: Double
+    public var adaptiveContrast: Bool      // opt-in: sample the desktop (Screen Recording) at arm
 
     public static let `default` = KidSettings(
         defaultScene: "Black Hole", kidSwitching: true, energeticEnabled: false, autoShuffle: false,
         shuffleInterval: 30, shakeToShuffle: true, audioEnabled: true, audioVolume: 0.8,
-        intensityCeiling: .balanced, maxSessionSeconds: 120)
+        intensityCeiling: .balanced, maxSessionSeconds: 120, adaptiveContrast: false)
 
     public init(defaultScene: String, kidSwitching: Bool, energeticEnabled: Bool, autoShuffle: Bool,
                 shuffleInterval: Double, shakeToShuffle: Bool, audioEnabled: Bool, audioVolume: Double,
-                intensityCeiling: Ceiling, maxSessionSeconds: Double) {
+                intensityCeiling: Ceiling, maxSessionSeconds: Double, adaptiveContrast: Bool) {
         self.defaultScene = defaultScene
         self.kidSwitching = kidSwitching
         self.energeticEnabled = energeticEnabled
@@ -40,6 +41,26 @@ public struct KidSettings: Codable, Equatable {
         self.audioVolume = audioVolume
         self.intensityCeiling = intensityCeiling
         self.maxSessionSeconds = maxSessionSeconds
+        self.adaptiveContrast = adaptiveContrast
+    }
+
+    // Forward-compatible decoding: fields added in later versions fall back to their
+    // defaults instead of failing the whole payload (which would silently reset every
+    // saved parent setting on upgrade).
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = KidSettings.default
+        defaultScene = try c.decodeIfPresent(String.self, forKey: .defaultScene) ?? d.defaultScene
+        kidSwitching = try c.decodeIfPresent(Bool.self, forKey: .kidSwitching) ?? d.kidSwitching
+        energeticEnabled = try c.decodeIfPresent(Bool.self, forKey: .energeticEnabled) ?? d.energeticEnabled
+        autoShuffle = try c.decodeIfPresent(Bool.self, forKey: .autoShuffle) ?? d.autoShuffle
+        shuffleInterval = try c.decodeIfPresent(Double.self, forKey: .shuffleInterval) ?? d.shuffleInterval
+        shakeToShuffle = try c.decodeIfPresent(Bool.self, forKey: .shakeToShuffle) ?? d.shakeToShuffle
+        audioEnabled = try c.decodeIfPresent(Bool.self, forKey: .audioEnabled) ?? d.audioEnabled
+        audioVolume = try c.decodeIfPresent(Double.self, forKey: .audioVolume) ?? d.audioVolume
+        intensityCeiling = try c.decodeIfPresent(Ceiling.self, forKey: .intensityCeiling) ?? d.intensityCeiling
+        maxSessionSeconds = try c.decodeIfPresent(Double.self, forKey: .maxSessionSeconds) ?? d.maxSessionSeconds
+        adaptiveContrast = try c.decodeIfPresent(Bool.self, forKey: .adaptiveContrast) ?? d.adaptiveContrast
     }
 
     // UserDefaults is user-writable and survives version changes — always clamp.

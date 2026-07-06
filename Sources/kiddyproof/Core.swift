@@ -164,6 +164,30 @@ struct EffectContext {
     let cursorVel: NSPoint        // px/s, render-derived
     let leftButtonDown: Bool      // is the (virtual) left button currently held
     let audio: KidAudio?          // long-lived; strong ref in a short-lived ctx is fine
+    let background: BackgroundLuminance?   // adaptive contrast map (opt-in), else nil
+    let fallbackLightness: CGFloat         // appearance/KP_TESTBG proxy when no map
+
+    // Background lightness behind a global point: 0 = dark wallpaper, 1 = white.
+    // With the opt-in adaptive-contrast map this is the REAL pixels behind the
+    // element; otherwise it's one session-wide proxy value.
+    func lightness(at p: NSPoint) -> CGFloat {
+        background?.luma(at: p) ?? fallbackLightness
+    }
+    // 0 on dark backgrounds → 1 on light: the standard blend weight for choosing
+    // between a scene's glow rendering and its bold-ink rendering.
+    func inkWeight(at p: NSPoint) -> CGFloat {
+        let l = lightness(at: p)
+        let t = min(1, max(0, (l - 0.42) / 0.28))
+        return t * t * (3 - 2 * t)
+    }
+}
+
+// Scene-side ink weight for draw() passes (scenes cache the map + fallback from the
+// last update(), since draw() has no context). Same curve as EffectContext.inkWeight.
+func inkWeight(_ map: BackgroundLuminance?, _ fallback: CGFloat, _ p: NSPoint) -> CGFloat {
+    let l = map?.luma(at: p) ?? fallback
+    let t = min(1, max(0, (l - 0.42) / 0.28))
+    return t * t * (3 - 2 * t)
 }
 
 // Calm = the default soothing experience; energetic = opt-in higher-energy scenes;

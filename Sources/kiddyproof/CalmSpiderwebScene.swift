@@ -190,9 +190,12 @@ final class CalmSpiderwebScene: Scene {
         bgMap = ctx.background; bgFallback = ctx.fallbackLightness
         breeze *= exp(-ctx.dt / 1.8)
 
-        // The spinneret: silk follows wherever the cursor travels.
-        if current == nil { startCurrent(at: ctx.cursor) }
-        extendCurrent(to: ctx.cursor)
+        // The spinneret: silk follows wherever the cursor travels (not while the
+        // scene is crossfading out — draining means no new content).
+        if !draining {
+            if current == nil { startCurrent(at: ctx.cursor) }
+            extendCurrent(to: ctx.cursor)
+        }
 
         // Elastic gather.
         let wasHolding = holding
@@ -289,7 +292,7 @@ final class CalmSpiderwebScene: Scene {
     func draw(into ctx: CGContext, bounds: CGRect, origin: CGPoint) {
         var all = threads
         if let c = current, c.pts.count > 1 { all.append(c) }
-        for (ti, t) in all.enumerated() where t.pts.count > 1 {
+        for t in all where t.pts.count > 1 {
             let vibrating = now - t.pluckTime < 1.4
             let baseA: CGFloat = vibrating ? 0.85 : 0.62
             // Chunked rendering (~32 points): background adaptation and the traveling
@@ -309,7 +312,9 @@ final class CalmSpiderwebScene: Scene {
                 let w = inkWeight(bgMap, bgFallback, t.pts[midIdx])
                 // Sheen sweeps along the silk: a soft sinus window traveling with time,
                 // offset per thread so glints wander the whole web.
-                let phase = Double(t.phase) + Double(ti) * 1.7 + Double(midIdx) * 0.09 - now * 1.1
+                // Keyed on the thread's own phase (NOT its array index — evictions
+                // shifted every glint at once).
+                let phase = Double(t.phase) * 7.3 + Double(midIdx) * 0.09 - now * 1.1
                 let sheen = max(0, CGFloat(sin(phase))) // half-wave: glints, not stripes
                 strokeSilk(ctx, path, color: Self.palette[t.color % Self.palette.count],
                            w: w, alpha: baseA, sheen: sheen * sheen * 0.9)

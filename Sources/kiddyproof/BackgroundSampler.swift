@@ -46,24 +46,32 @@ enum BackgroundSampler {
                 completion(nil)
                 return
             }
-            Task {
-                var grids: [BackgroundLuminance.DisplayGrid] = []
-                for display in content.displays {
-                    guard let screen = NSScreen.screens.first(where: {
-                        ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == display.displayID
-                    }) else { continue }
-                    let filter = SCContentFilter(display: display, excludingWindows: [])
-                    let cfg = SCStreamConfiguration()
-                    cfg.width = 96
-                    cfg.height = 60
-                    cfg.showsCursor = false
-                    if let img = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg),
-                       let grid = lumaGrid(from: img, frame: screen.frame) {
-                        grids.append(grid)
+            // NSScreen is a main-thread API: snapshot the id->frame map there, then
+            // do the captures off-main with the plain values.
+            DispatchQueue.main.async {
+                var screenFrames: [CGDirectDisplayID: NSRect] = [:]
+                for sc in NSScreen.screens {
+                    if let id = sc.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
+                        screenFrames[id] = sc.frame
                     }
                 }
-                NSLog("[kiddyproof] adaptive contrast: sampled \(grids.count) display(s).")
-                completion(grids.isEmpty ? nil : BackgroundLuminance(grids: grids))
+                Task {
+                    var grids: [BackgroundLuminance.DisplayGrid] = []
+                    for display in content.displays {
+                        guard let frame = screenFrames[display.displayID] else { continue }
+                        let filter = SCContentFilter(display: display, excludingWindows: [])
+                        let cfg = SCStreamConfiguration()
+                        cfg.width = 96
+                        cfg.height = 60
+                        cfg.showsCursor = false
+                        if let img = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg),
+                           let grid = lumaGrid(from: img, frame: frame) {
+                            grids.append(grid)
+                        }
+                    }
+                    NSLog("[kiddyproof] adaptive contrast: sampled \(grids.count) display(s).")
+                    completion(grids.isEmpty ? nil : BackgroundLuminance(grids: grids))
+                }
             }
         }
     }

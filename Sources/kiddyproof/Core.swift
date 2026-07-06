@@ -240,6 +240,10 @@ final class MashMeter {
     // Calm/Balanced/Wild setting. The scene's own ceiling is the hard cap, so a calm
     // scene stays calm regardless of how hard the kid mashes.
     func update(heartbeat: UInt64, dt: CGFloat, reactivity: Reactivity, ceilingMult: CGFloat) {
+        // First sample after a reset only records the baseline: the heartbeat kept
+        // counting pass-through events between sessions, and treating that whole
+        // idle delta as one frame of input opened every session with a phantom flare.
+        if !hasBaseline { hasBaseline = true; lastHeartbeat = heartbeat; return }
         let delta = heartbeat >= lastHeartbeat ? heartbeat - lastHeartbeat : 0
         lastHeartbeat = heartbeat
         let rate = dt > 0 ? CGFloat(delta) / dt : 0                 // events/sec
@@ -249,7 +253,8 @@ final class MashMeter {
         intensity = min(value, reactivity.ceiling * ceilingMult)
     }
 
-    func reset() { value = 0; intensity = 0 }
+    private var hasBaseline = false
+    func reset() { value = 0; intensity = 0; hasBaseline = false }
 }
 
 // Small vector helpers (kept local; CGPoint math reads cleaner than SIMD here).

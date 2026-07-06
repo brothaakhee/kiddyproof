@@ -54,7 +54,7 @@ final class KaleidoscopeScene: Scene {
 
     private var center = NSPoint.zero
     private var lastCursorRel = NSPoint.zero
-    private var seeded = false
+    private var seededBounds = CGRect.zero
     private var now: TimeInterval = 0
 
     // Adaptive contrast cache.
@@ -78,13 +78,16 @@ final class KaleidoscopeScene: Scene {
         motes.removeAll(keepingCapacity: true)
         symmetry = 8; scrollAccum = 0
         spin = 0; spinV = 0.05; holdLevel = 0; pulse = 0
-        seeded = false
+        seededBounds = .zero; lastCursorRel = .zero
         draining = false
     }
 
     private func seedIfNeeded(_ bounds: CGRect) {
-        guard !seeded else { return }
-        seeded = true
+        // Keyed on the full bounds: a display change re-centers the mandala instead
+        // of leaving it stranded (or in the dead zone between monitors).
+        guard bounds != seededBounds else { return }
+        seededBounds = bounds
+        motes.removeAll(keepingCapacity: true)
         center = NSPoint(x: bounds.midX, y: bounds.midY)
         let maxR = min(bounds.width, bounds.height) * 0.42
         for _ in 0..<26 {
@@ -149,6 +152,10 @@ final class KaleidoscopeScene: Scene {
                 if next != symmetry {
                     symmetry = next
                     pulse = 1
+                    // Trim to the new budget NOW: N scales the draw count, and the
+                    // leftover petal overhang used to collide with the refold flash.
+                    if petals.count > maxPetals { petals.removeFirst(petals.count - maxPetals) }
+                    if trail.count > maxTrail { trail.removeFirst(trail.count - maxTrail) }
                     ctx.audio?.ping()
                 }
             }

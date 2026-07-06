@@ -51,6 +51,8 @@ final class ParticlePool {
     func spawn(_ p: Particle) -> Bool {
         let ch = Int(p.channel)
         if count >= cap || perChannel[ch] >= quotas[ch] { return false }
+        var p = p
+        p.life = max(0.001, p.life)   // life 0 would NaN the draw math
         items[count] = p
         count += 1
         perChannel[ch] += 1
@@ -78,11 +80,12 @@ final class ParticlePool {
         }
     }
 
-    // Batched draw. `paths` keyed by bucket = color*16 + alphaQ*2 + additive.
+    // Batched draw. `paths` keyed by bucket = color*64 + alphaQ*2 + additive
+    // (encode below: (color*32 + alphaQ)*2 + additive; decode must match).
     func draw(into ctx: CGContext, origin: CGPoint, palette: Palette, now: TimeInterval) {
         guard count > 0 else { return }
         var paths = [Int: CGMutablePath]()
-        paths.reserveCapacity(64)
+        paths.reserveCapacity(256)   // 8 colors x 16 alpha levels x 2 blend modes
         for i in 0..<count {
             let p = items[i]
             let lifeFrac = max(0, 1 - CGFloat((now - p.birth) / p.life)) // 1→0 over life

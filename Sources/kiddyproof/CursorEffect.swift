@@ -43,9 +43,14 @@ final class CursorEffect {
         colors: [NSColor.black.cgColor, NSColor(white: 0.05, alpha: 0).cgColor] as CFArray,
         locations: [0, 1])
 
-    func reset() { ring.removeAll(keepingCapacity: true); velocity = .zero }
+    private var hasLast = false
+    func reset() {
+        hasLast = false
+        ring.removeAll(keepingCapacity: true); velocity = .zero
+    }
 
     func update(cursor: NSPoint, dt: CGFloat, now: TimeInterval) {
+        if !hasLast { hasLast = true; lastPos = cursor }   // no velocity spike from a stale anchor
         let moved = cursor - lastPos
         if dt > 0 {
             let inst = moved * (1 / dt)

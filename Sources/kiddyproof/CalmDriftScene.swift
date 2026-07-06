@@ -131,6 +131,7 @@ final class CalmDriftScene: Scene {
             }
             ctx.audio?.note(for: keyString(event), intensity: ctx.intensity)
         case .click(let pt, .left):
+            if pulses.count >= 12 { pulses.removeFirst() }   // the one uncapped event array
             pulses.append(Pulse(pos: pt, birth: ctx.now, color: rng.int(Self.cores.count)))
             ctx.audio?.glimmer()   // light rolling through the field — glass, not wind
         case .scroll(let dy):
@@ -156,7 +157,7 @@ final class CalmDriftScene: Scene {
 
         // Hold state: ease the gather level in/out; on release, scatter the cluster.
         let wasHolding = holding
-        holding = ctx.leftButtonDown
+        holding = ctx.leftButtonDown && !draining
         if holding { holdLevel += (1 - holdLevel) * min(1, dt * 2.2) }
         else { holdLevel += (0 - holdLevel) * min(1, dt * 3.5) }
         if wasHolding && !holding { releaseGathered(ctx) }

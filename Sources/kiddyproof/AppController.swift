@@ -463,10 +463,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // The commit half of arming — runs after the (optional) background capture.
     private func commitArm(background: BackgroundLuminance?) {
-        // The capture window is async: re-check the two states that could have
-        // changed underneath it.
+        // The capture window is async: re-check the states that could have changed
+        // underneath it (armed, secure input, and the display layout for the clamp).
         guard !state.isArmed() else { return }
         if SecureInputGuard.isActive() { return }
+        let freshBounds = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
+        suppressor.clampBounds = freshBounds
 
         // Engage the failsafe FIRST and gate on it: never enter kid mode without a
         // working watchdog (the parent must always be able to get out). On failure we

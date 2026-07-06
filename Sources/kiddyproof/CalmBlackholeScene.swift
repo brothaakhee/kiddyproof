@@ -181,6 +181,7 @@ final class CalmBlackholeScene: Scene {
             let r = m.size * (1 + near)
             let mx = m.pos.x - origin.x, my = m.pos.y - origin.y
             if near > 0.25 {
+                ctx.setAlpha(1)   // the previous mote's glow alpha would otherwise dim this streak
                 ctx.setBlendMode(.plusLighter); ctx.setStrokeColor(Self.swatches[m.color % 3].withAlphaComponent(0.5 * near).cgColor)
                 ctx.setLineWidth(r); ctx.setLineCap(.round)
                 ctx.beginPath(); ctx.move(to: CGPoint(x: mx, y: my)); ctx.addLine(to: CGPoint(x: mx + dx * 0.18, y: my + dy * 0.18)); ctx.strokePath()

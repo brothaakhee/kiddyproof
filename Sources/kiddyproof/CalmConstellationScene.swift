@@ -237,10 +237,20 @@ final class CalmConstellationScene: Scene {
     // order, exactly as before. (A per-star link cap was tried and walked back: it
     // starved the mash-web and picked survivors by iteration order.)
     private func maintainLinks(dt: CGFloat) {
+        // ONE dictionary rebuild per frame (decay + prune together); the old
+        // decay-pass + filter-pass copied the whole dict twice at 60fps.
         let decay = CGFloat(exp(-dt / linkFadeTau))
-        links = links.mapValues { var l = $0; l.alpha *= decay; return l }
+        links = links.compactMapValues { link in
+            var l = link
+            l.alpha *= decay
+            return l.alpha > 0.02 ? l : nil
+        }
         let t2 = linkDist * linkDist
         let n = stars.count
+        // Soft ceiling: existing links always refresh (the mash-web stays dense and
+        // alive), but NEW links stop forming past 3000 — the pathological all-pairs
+        // cluster (~11k links, triple-stroked, per display) fell off the frame budget.
+        var canGrow = links.count < 3000
         for a in 0..<n {
             let sa = stars[a].pos
             for b in (a + 1)..<n {
@@ -251,12 +261,12 @@ final class CalmConstellationScene: Scene {
                 if links[key] != nil {
                     links[key]!.alpha = max(links[key]!.alpha, target)
                     links[key]!.a = sa; links[key]!.b = stars[b].pos
-                } else {
+                } else if canGrow {
                     links[key] = Link(alpha: target, a: sa, b: stars[b].pos)
+                    canGrow = links.count < 3000
                 }
             }
         }
-        links = links.filter { $0.value.alpha > 0.02 }
     }
 
     func liveCount() -> Int { stars.count + pulses.count + meteors.count }

@@ -43,13 +43,16 @@ final class FireworksScene: Scene {
     private var charging = false
     private var chargeStart: TimeInterval = 0
     private var chargeLevel: CGFloat = 0
+    // A press+release completing INSIDE one frame is invisible to the sampled
+    // leftButtonDown edge — the .click event records it so no tap ever fires nothing.
+    private var tapPending: NSPoint?
 
     var audioSwell: CGFloat { chargeLevel * 0.3 }
 
     func reset() {
         pool.reset(); shells.removeAll(keepingCapacity: true)
         smokeAnchor = nil
-        charging = false; chargeLevel = 0
+        charging = false; chargeLevel = 0; tapPending = nil
         draining = false
     }
 
@@ -84,9 +87,10 @@ final class FireworksScene: Scene {
                                     additive: true, flicker: true))
             }
             ctx.audio?.note(for: keyString(event), intensity: ctx.intensity)
-        case .click:
-            break   // the SHOT fires on release — see update()'s charge edge
-        case .scroll:
+        case .click(let pt, .left):
+            tapPending = pt   // consumed in update(): either the hold takes over, or
+                              // a sub-frame tap fires a minimum-power shell
+        default:
             break
         }
     }
@@ -113,6 +117,7 @@ final class FireworksScene: Scene {
         // Charge/fire: hold builds power (the muzzle orb swells), release SHOOTS.
         if ctx.leftButtonDown && !draining {
             if !charging { charging = true; chargeStart = ctx.now }
+            tapPending = nil   // the hold owns this press now
             chargeLevel = min(1, CGFloat((ctx.now - chargeStart) / 1.2))
             // Crackle off the muzzle while charging.
             if rng.unit() < dt * (6 + 30 * chargeLevel) {
@@ -126,8 +131,12 @@ final class FireworksScene: Scene {
             }
         } else if charging {
             charging = false
-            launchShell(from: ctx.cursor, power: chargeLevel, ctx)
+            if !draining { launchShell(from: ctx.cursor, power: chargeLevel, ctx) }
             chargeLevel = 0
+        } else if let pt = tapPending {
+            // The press and release both happened between frames: still a shot.
+            tapPending = nil
+            if !draining { launchShell(from: pt, power: 0, ctx) }
         }
 
         // Shells rise; detonate at apex or fuse.
@@ -139,7 +148,10 @@ final class FireworksScene: Scene {
             pool.spawn(Particle(pos: shells[i].pos, vel: .zero, birth: ctx.now, life: 0.25,
                                 size: shells[i].mini ? 1.4 : 2.2, gravity: 0, drag: 1, color: 6,
                                 channel: UInt8(Channel.clicks.rawValue), additive: true))
-            if ctx.now >= shells[i].detonateAt || shells[i].vel.y <= 20 {
+            // Minis detonate on their FUSE only: ~37% of crossette fragments launch
+            // with vel.y <= 20 and the apex test popped them the same frame they
+            // spawned, collapsing the volley into one clumped flash.
+            if ctx.now >= shells[i].detonateAt || (!shells[i].mini && shells[i].vel.y <= 20) {
                 detonate(shells[i], ctx); shells.remove(at: i)
             } else { i += 1 }
         }
@@ -200,8 +212,10 @@ final class FireworksScene: Scene {
             burstRing(shell.pos, n: Int(26 * boost), spd: 110...210, life: 0.8...1.2,
                       size: 3...4.5, gravity: 300, drag: 0.7, color: 1, jitter: 0.8)
         case .crossette:
-            // Split into a volley of mini-shells that pop on their own fuses.
-            for _ in 0..<Int(9 * boost) {
+            // Split into a volley of mini-shells that pop on their own fuses,
+            // bounded by a total-shells budget so stacked crossettes can't crowd
+            // out the player's own shots.
+            for _ in 0..<max(0, min(Int(9 * boost), 32 - shells.count)) {
                 let ang = rng.range(0, 2 * .pi)
                 let spd = rng.range(190, 300)
                 shells.append(Shell(pos: shell.pos,

@@ -37,6 +37,14 @@ final class Director {
     var sceneNames: [String] { scenes.map { $0.name } }                              // all (incl. archived) — for KP_SCENE
     var pickableNames: [String] { scenes.filter { $0.category != .archived }.map { $0.name } }  // parent-selectable
 
+    // Isolation preview: select by exact name, ignoring archived/enabled filters.
+    func forceSelect(named name: String) {
+        guard incoming == nil, let i = scenes.firstIndex(where: { $0.name == name }) else { return }
+        index = i
+        current = scenes[i]
+        current.draining = false
+    }
+
     // Pick the active scene with no crossfade — used once at arm, before any frame.
     // A disabled/unknown default falls back to the first enabled scene.
     func select(named name: String) {

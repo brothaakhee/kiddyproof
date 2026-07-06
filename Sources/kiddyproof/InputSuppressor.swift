@@ -150,6 +150,9 @@ final class InputSuppressor {
         let flags = event.flags
         let chord = flags.contains(.maskControl) && flags.contains(.maskAlternate) && flags.contains(.maskCommand)
         let now = ProcessInfo.processInfo.systemUptime
+        // Extract the character BEFORE taking the lock: keyboardGetUnicodeString hits
+        // the TIS layout and allocates — the render tick contends this lock at 60Hz.
+        let keyStr: String? = type == .keyDown ? Self.character(from: event) : nil
 
         // One lock per event: bump heartbeat, branch on armed, mutate, decide outcome.
         let action: Action = state.update { s in
@@ -186,7 +189,7 @@ final class InputSuppressor {
             case .otherMouseDown:
                 s.pushEvent(InputEvent(kind: .click(s.virtualCursor, .other), time: now))
             case .keyDown:
-                if let str = Self.character(from: event), !str.isEmpty {
+                if let str = keyStr, !str.isEmpty {
                     s.pushEvent(InputEvent(kind: .key(str), time: now))
                 }
             case .scrollWheel:

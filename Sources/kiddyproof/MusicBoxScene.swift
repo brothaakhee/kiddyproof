@@ -47,7 +47,7 @@ final class MusicBoxScene: Scene {
     private var center = NSPoint.zero
     private var outerR: CGFloat = 300
     private var innerR: CGFloat = 200
-    private var seeded = false
+    private var seededBounds = CGRect.zero
     private var now: TimeInterval = 0
 
     // Adaptive contrast cache.
@@ -69,13 +69,15 @@ final class MusicBoxScene: Scene {
         gems.removeAll(keepingCapacity: true)
         bursts.removeAll(keepingCapacity: true)
         period = 4.5; playAngle = 0; holdLevel = 0
-        seeded = false
+        seededBounds = .zero
         draining = false
     }
 
     private func seedIfNeeded(_ bounds: CGRect) {
-        guard !seeded else { return }
-        seeded = true
+        // Re-center whenever the union changes (display plug/unplug mid-session
+        // left the carousel stranded at the old midpoint).
+        guard bounds != seededBounds else { return }
+        seededBounds = bounds
         center = NSPoint(x: bounds.midX, y: bounds.midY)
         let m = min(bounds.width, bounds.height)
         outerR = m * 0.34
@@ -123,7 +125,9 @@ final class MusicBoxScene: Scene {
         // Advance the beam; double-time under a held hand.
         let prev = playAngle
         playAngle += 2 * .pi / period * (1 + holdLevel) * dt
-        if playAngle >= 2 * .pi { playAngle -= 2 * .pi }
+        // Remainder, not a single subtraction: a gem stored at an angle > 2pi would
+        // never be struck AND never dissolve (gems only die by hits).
+        playAngle = playAngle.truncatingRemainder(dividingBy: 2 * .pi)
 
         // Strike gems the beam crossed this frame (mind the wraparound).
         for i in gems.indices {

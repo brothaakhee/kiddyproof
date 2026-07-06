@@ -11,6 +11,7 @@ final class OverlayWindowManager: NSObject {
     // so it is treated as proof of a live input leak.
     var onLeakDetected: (() -> Void)?
     private var leakReported = false
+    private var armUptime: TimeInterval = 0
 
     private var panels: [NSPanel] = []
     private var views: [EffectsView] = []
@@ -90,8 +91,19 @@ final class OverlayWindowManager: NSObject {
         cursorFX.reset(); mash.reset(); orb.reset(); director.reset()
         // Session-scoped settings: sampled ONCE at arm (snapshot under the lock).
         let s = state.read { $0.settings }
-        director.enabledNames = Set(director.pickableNames).subtracting(s.disabledScenes)
-        director.select(named: s.defaultScene)
+        if let iso = ProcessInfo.processInfo.environment["KP_SCENE"] {
+            // Isolation preview bypasses the enabled/archived filters entirely —
+            // that's its whole purpose (reviewing any scene alone).
+            director.enabledNames = [iso]
+            director.forceSelect(named: iso)
+        } else {
+            var enabled = Set(director.pickableNames).subtracting(s.disabledScenes)
+            // A stale disabledScenes payload (scenes renamed/archived by an update)
+            // can empty the set; falling back beats running a disabled scene.
+            if enabled.isEmpty { enabled = Set(director.pickableNames) }
+            director.enabledNames = enabled
+            director.select(named: s.defaultScene)
+        }
         orb.enabled = s.kidSwitching
         audio.setEnabled(s.audioEnabled); audio.setVolume(Float(s.audioVolume))
         autoShuffle = s.autoShuffle && s.kidSwitching
@@ -104,6 +116,7 @@ final class OverlayWindowManager: NSObject {
         for screen in NSScreen.screens { addPanel(for: screen) }
 
         armTime = CACurrentMediaTime(); hintAlpha = 1   // show the exit hint on entry, then fade
+        armUptime = ProcessInfo.processInfo.systemUptime  // leak-tripwire grace anchor
 
         // A plain 60Hz timer drives sim + redraw (proven reliable; avoids the
         // CADisplayLink↔CATransaction flush coupling that saturated this GPU).
@@ -171,7 +184,11 @@ final class OverlayWindowManager: NSObject {
     // Called by EffectsView when a real AppKit input event lands on the overlay while
     // armed. The tap swallows everything when healthy, so this only happens if input
     // is leaking — report once and let the owner tear kid mode down.
-    fileprivate func inputReachedOverlay() {
+    fileprivate func inputReachedOverlay(timestamp: TimeInterval) {
+        // Events already in flight when the overlay fronted are NOT leaks: the tap
+        // legitimately passed them through moments before armed flipped true (kid
+        // mashing while the parent arms). Only post-arm events count.
+        guard timestamp > armUptime else { return }
         guard state.isArmed(), !leakReported else { return }
         leakReported = true
         NSLog("[kiddyproof] INPUT LEAK: an event reached the overlay through AppKit.")
@@ -243,8 +260,11 @@ final class OverlayWindowManager: NSObject {
     private func maybeShuffle(now: TimeInterval) {
         let cool = now - lastShuffle > 2.0
         if autoShuffle && now >= nextShuffleAt {
-            nextShuffleAt = now + shuffleInterval
-            if cool { director.requestNext(now: now); lastShuffle = now; return }
+            if cool {
+                nextShuffleAt = now + shuffleInterval
+                director.requestNext(now: now); lastShuffle = now; return
+            }
+            nextShuffleAt = now + 2.5   // retry shortly instead of skipping a whole interval
         }
         guard shakeEnabled else { return }
         let vx = cursorFX.currentVelocity.x
@@ -359,9 +379,9 @@ final class EffectsView: NSView {
     // events, which NSView ignores without a tracking area, so they can't false-fire.
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func mouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
-    override func rightMouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
-    override func otherMouseDown(with event: NSEvent) { manager?.inputReachedOverlay() }
-    override func scrollWheel(with event: NSEvent) { manager?.inputReachedOverlay() }
-    override func keyDown(with event: NSEvent) { manager?.inputReachedOverlay() }
+    override func mouseDown(with event: NSEvent) { manager?.inputReachedOverlay(timestamp: event.timestamp) }
+    override func rightMouseDown(with event: NSEvent) { manager?.inputReachedOverlay(timestamp: event.timestamp) }
+    override func otherMouseDown(with event: NSEvent) { manager?.inputReachedOverlay(timestamp: event.timestamp) }
+    override func scrollWheel(with event: NSEvent) { manager?.inputReachedOverlay(timestamp: event.timestamp) }
+    override func keyDown(with event: NSEvent) { manager?.inputReachedOverlay(timestamp: event.timestamp) }
 }

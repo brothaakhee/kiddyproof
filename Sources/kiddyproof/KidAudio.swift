@@ -125,7 +125,9 @@ final class KidAudio {
                 drone.stop(); vacuum.stop()
                 for v in voices where engine.isRunning { v.play() }
                 startBeds()
-                primed = true
+                // Only latch primed on SUCCESS: latching on a transient engine-start
+                // failure left every player node dead for all future sessions.
+                primed = engine.isRunning
             }
         } else if engine.isRunning {
             engine.pause()   // release the CPU + output device between sessions
@@ -184,7 +186,8 @@ final class KidAudio {
         globalTick &+= 1; lastUsed[idx] = globalTick
         let v = voices[idx]
         v.volume = gain
-        if v.isPlaying { v.stop(); v.play() }
+        if v.isPlaying { v.stop() }
+        v.play()   // always (re)start: scheduling onto a stopped node queues silence
         v.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
     }
 

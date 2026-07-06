@@ -12,6 +12,7 @@ struct Particle {
     var color: UInt8              // index into the active palette
     var channel: UInt8            // Channel.rawValue, for per-channel quotas
     var additive: Bool            // plusLighter (glowy) vs normal
+    var flicker: Bool = false     // strobe the alpha like a burning spark
 }
 
 // Fixed-capacity dense particle pool shared by all of a scene's channels.
@@ -84,8 +85,13 @@ final class ParticlePool {
         paths.reserveCapacity(64)
         for i in 0..<count {
             let p = items[i]
-            let frac = max(0, 1 - CGFloat((now - p.birth) / p.life))     // 1→0 over life
-            let alphaQ = min(7, Int(frac * 7.999))
+            var frac = max(0, 1 - CGFloat((now - p.birth) / p.life))     // 1→0 over life
+            if p.flicker {
+                // Burning-spark strobe, phase-keyed off birth so each spark twinkles
+                // on its own clock.
+                frac *= 0.55 + 0.45 * CGFloat(sin(now * 21 + p.birth * 977))
+            }
+            let alphaQ = min(7, Int(max(0, frac) * 7.999))
             let r = p.size * (0.35 + 0.65 * frac)                        // shrink as it dies
             if r < 0.4 { continue }
             let key = Int(p.color) * 16 + alphaQ * 2 + (p.additive ? 1 : 0)

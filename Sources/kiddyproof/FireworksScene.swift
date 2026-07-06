@@ -1,8 +1,12 @@
 import AppKit
 
-// FIREWORKS scene: keys=spark fountains, clicks=aerial shells that rise & detonate,
-// move=smoke/ember trail (distance-gated), bg=night sky. All particles share one
-// pool; shells are tracked separately because they detonate into the pool.
+// FIREWORKS: keys = spark fountains, the cursor is a SPARKLER (a burning wand tip of
+// tiny flickering embers), and the mouse button is the SHOT: tap for a shell, HOLD TO
+// CHARGE — the muzzle orb at the cursor swells and crackles as energy builds, and
+// release fires a round whose size matches the charge, up to a double-ring monster.
+// Six shell types keep the sky varied: peony, ring, willow, palm, crossette (splits
+// mid-air into a volley of mini-bursts), and strobe. All sparks flicker and shrink
+// as they burn out. bg = twinkling night sky over a deeper dusk veil.
 final class FireworksScene: Scene {
     let name = "Fireworks"
     let category = SceneCategory.energetic
@@ -14,32 +18,51 @@ final class FireworksScene: Scene {
     static let palette = Palette(
         [(1, 0.85, 0.4), (1, 0.55, 0.2), (1, 0.3, 0.35), (0.4, 0.7, 1),
          (0.7, 0.4, 1), (0.4, 1, 0.6), (1, 1, 0.9), (1, 0.45, 0.7)])
-    private var pool = ParticlePool(cap: 1800, quotas: [.keys: 600, .clicks: 1200, .move: 400])
+    private var pool = ParticlePool(cap: 2200, quotas: [.keys: 600, .clicks: 1500, .move: 340])
     private var rng = RNG(seed: 0xF14E)
 
-    private struct Shell { var pos: NSPoint; var vel: NSPoint; var detonateAt: TimeInterval; var color: UInt8 }
+    private enum ShellKind: CaseIterable { case peony, ring, willow, palm, crossette, strobe }
+    private struct Shell {
+        var pos: NSPoint; var vel: NSPoint
+        var detonateAt: TimeInterval
+        var color: UInt8
+        var kind: ShellKind
+        var power: CGFloat          // 0 tap … 1 fully charged
+        var mini: Bool = false      // crossette fragment
+    }
     private var shells = [Shell]()
 
     private struct Star { var x: CGFloat; var y: CGFloat; var base: CGFloat; var phase: CGFloat; var speed: CGFloat }
     private var stars = [Star]()
-    private var lastBg = CGSize.zero
+    private var lastBg = CGRect.zero
 
     private var smokeAnchor: NSPoint?
     private var lastBoom: TimeInterval = 0
 
+    // Charge state: button down = charging; release fires with the built-up power.
+    private var charging = false
+    private var chargeStart: TimeInterval = 0
+    private var chargeLevel: CGFloat = 0
+
+    var audioSwell: CGFloat { chargeLevel * 0.3 }
+
     func reset() {
         pool.reset(); shells.removeAll(keepingCapacity: true)
-        smokeAnchor = nil; draining = false
+        smokeAnchor = nil
+        charging = false; chargeLevel = 0
+        draining = false
     }
 
-    private func buildStars(_ size: CGSize) {
-        guard size != lastBg else { return }
-        lastBg = size
+    private func buildStars(_ bounds: CGRect) {
+        guard bounds != lastBg else { return }
+        lastBg = bounds
         stars.removeAll(keepingCapacity: true)
         var r = RNG(seed: 0x57A45)
-        let n = 140
-        for _ in 0..<n {
-            stars.append(Star(x: r.range(0, size.width), y: r.range(size.height * 0.25, size.height),
+        // Absolute union-bounds coords: on multi-display setups the union origin is
+        // not (0,0), and 0-based stars all slid into one corner.
+        for _ in 0..<140 {
+            stars.append(Star(x: r.range(bounds.minX, bounds.maxX),
+                              y: r.range(bounds.minY + bounds.height * 0.25, bounds.maxY),
                               base: r.range(0.2, 0.7), phase: r.range(0, 6.28), speed: r.range(0.6, 2.2)))
         }
     }
@@ -56,16 +79,13 @@ final class FireworksScene: Scene {
                 pool.spawn(Particle(pos: ctx.cursor,
                                     vel: NSPoint(x: cos(ang) * spd, y: sin(ang) * spd),
                                     birth: ctx.now, life: Double(rng.range(0.5, 1.0)),
-                                    size: rng.range(2.5, 5), gravity: 900, drag: 0.8,
-                                    color: color, channel: UInt8(Channel.keys.rawValue), additive: true))
+                                    size: rng.range(2, 4), gravity: 900, drag: 0.8,
+                                    color: color, channel: UInt8(Channel.keys.rawValue),
+                                    additive: true, flicker: true))
             }
             ctx.audio?.note(for: keyString(event), intensity: ctx.intensity)
-        case .click(let pt, let button):
-            guard button == .left, shells.count < 14 else { return }
-            shells.append(Shell(pos: pt, vel: NSPoint(x: rng.range(-40, 40), y: rng.range(620, 800)),
-                                detonateAt: ctx.now + Double(rng.range(0.55, 0.9)),
-                                color: UInt8(rng.int(Self.palette.colors.count))))
-            ctx.audio?.whoosh()
+        case .click:
+            break   // the SHOT fires on release — see update()'s charge edge
         case .scroll:
             break
         }
@@ -75,9 +95,40 @@ final class FireworksScene: Scene {
         if case let .key(s) = e.kind { return s }; return " "
     }
 
+    private func launchShell(from p: NSPoint, power: CGFloat, _ ctx: EffectContext) {
+        guard shells.count < 16 else { return }
+        let kind = ShellKind.allCases[rng.int(ShellKind.allCases.count)]
+        let rise = 620 + power * 260
+        shells.append(Shell(pos: p, vel: NSPoint(x: rng.range(-40, 40), y: rng.range(rise, rise + 180)),
+                            detonateAt: ctx.now + Double(rng.range(0.55, 0.9)),
+                            color: UInt8(rng.int(Self.palette.colors.count)),
+                            kind: kind, power: power))
+        ctx.audio?.whoosh()
+    }
+
     func update(_ ctx: EffectContext) {
-        buildStars(ctx.bounds.size)
+        buildStars(ctx.bounds)
         let dt = ctx.dt
+
+        // Charge/fire: hold builds power (the muzzle orb swells), release SHOOTS.
+        if ctx.leftButtonDown && !draining {
+            if !charging { charging = true; chargeStart = ctx.now }
+            chargeLevel = min(1, CGFloat((ctx.now - chargeStart) / 1.2))
+            // Crackle off the muzzle while charging.
+            if rng.unit() < dt * (6 + 30 * chargeLevel) {
+                let ang = rng.range(0, 2 * .pi)
+                pool.spawn(Particle(pos: ctx.cursor,
+                                    vel: NSPoint(x: cos(ang) * rng.range(40, 140), y: sin(ang) * rng.range(40, 140) + 40),
+                                    birth: ctx.now, life: Double(rng.range(0.25, 0.5)),
+                                    size: rng.range(1.5, 2.8), gravity: 300, drag: 1.2,
+                                    color: 6, channel: UInt8(Channel.move.rawValue),
+                                    additive: true, flicker: true))
+            }
+        } else if charging {
+            charging = false
+            launchShell(from: ctx.cursor, power: chargeLevel, ctx)
+            chargeLevel = 0
+        }
 
         // Shells rise; detonate at apex or fuse.
         var i = 0
@@ -86,27 +137,31 @@ final class FireworksScene: Scene {
             shells[i].pos = shells[i].pos + shells[i].vel * dt
             // rising trail
             pool.spawn(Particle(pos: shells[i].pos, vel: .zero, birth: ctx.now, life: 0.25,
-                                size: 2.2, gravity: 0, drag: 1, color: 6,
+                                size: shells[i].mini ? 1.4 : 2.2, gravity: 0, drag: 1, color: 6,
                                 channel: UInt8(Channel.clicks.rawValue), additive: true))
             if ctx.now >= shells[i].detonateAt || shells[i].vel.y <= 20 {
                 detonate(shells[i], ctx); shells.remove(at: i)
             } else { i += 1 }
         }
 
-        // Smoke/ember trail, distance-gated off the cursor.
+        // The sparkler: the moving cursor is a burning wand tip — tiny, dense,
+        // flickering white-gold embers with a little fall, never grey smoke.
         if let anchor = smokeAnchor {
             var d = sqrt(hypot2(ctx.cursor - anchor))
             var from = anchor
-            while d > 16, !draining {
+            while d > 7, !draining {
                 let step = (ctx.cursor - from)
                 let len = sqrt(hypot2(step))
                 guard len > 0.001 else { break }
-                from = from + step * (16 / len)
-                pool.spawn(Particle(pos: from, vel: NSPoint(x: rng.range(-12, 12), y: rng.range(20, 60)),
-                                    birth: ctx.now, life: Double(rng.range(0.7, 1.3)),
-                                    size: rng.range(6, 12), gravity: -60, drag: 1.6, color: 6,
-                                    channel: UInt8(Channel.move.rawValue), additive: true))
-                d -= 16
+                from = from + step * (7 / len)
+                pool.spawn(Particle(pos: from,
+                                    vel: NSPoint(x: rng.range(-70, 70), y: rng.range(-30, 90)),
+                                    birth: ctx.now, life: Double(rng.range(0.25, 0.6)),
+                                    size: rng.range(1.5, 3), gravity: 260, drag: 1.0,
+                                    color: rng.unit() < 0.6 ? 6 : 0,
+                                    channel: UInt8(Channel.move.rawValue),
+                                    additive: true, flicker: true))
+                d -= 7
             }
         }
         smokeAnchor = ctx.cursor
@@ -114,18 +169,78 @@ final class FireworksScene: Scene {
         pool.step(dt: dt, now: ctx.now)
     }
 
+    // MARK: Shell chemistry — six kinds, each with its own physics signature.
+
     private func detonate(_ shell: Shell, _ ctx: EffectContext) {
-        let n = Int(60 + 80 * ctx.intensity)
-        for k in 0..<n {
-            let ang = CGFloat(k) * (2 * .pi / CGFloat(n)) + rng.range(-0.1, 0.1)
-            let spd = rng.range(220, 360)
-            pool.spawn(Particle(pos: shell.pos,
-                                vel: NSPoint(x: cos(ang) * spd, y: sin(ang) * spd),
-                                birth: ctx.now, life: Double(rng.range(0.8, 1.5)),
-                                size: rng.range(2.5, 4.5), gravity: 320, drag: 0.6,
-                                color: shell.color, channel: UInt8(Channel.clicks.rawValue), additive: true))
+        // A crossette fragment pops as one small peony — and never re-splits.
+        if shell.mini {
+            burstRing(shell.pos, n: 16, spd: 130...210, life: 0.5...0.9,
+                      size: 1.8...2.8, gravity: 300, drag: 0.6, color: shell.color, jitter: 0.5)
+            if ctx.now - lastBoom > 0.06 { ctx.audio?.boom(intensity: 0.3); lastBoom = ctx.now }
+            return
         }
-        if ctx.now - lastBoom > 0.06 { ctx.audio?.boom(intensity: ctx.intensity); lastBoom = ctx.now }
+        let boost = 1 + shell.power * 1.4          // charged rounds are monsters
+        switch shell.kind {
+        case .peony:
+            burstRing(shell.pos, n: Int((60 + 80 * ctx.intensity) * boost),
+                      spd: 220...360, life: 0.8...1.4, size: 2...3.5,
+                      gravity: 320, drag: 0.6, color: shell.color, jitter: 0.6)
+        case .ring:
+            // A crisp expanding circle: narrow speed band, no jitter.
+            burstRing(shell.pos, n: Int(90 * boost), spd: 300...330, life: 1.0...1.3,
+                      size: 2...3, gravity: 240, drag: 0.5, color: shell.color, jitter: 0.02)
+        case .willow:
+            // Long-lived golden strands that droop like the tree.
+            burstRing(shell.pos, n: Int(55 * boost), spd: 140...230, life: 1.9...2.6,
+                      size: 2.5...3.5, gravity: 480, drag: 0.35, color: 0, jitter: 0.4)
+        case .palm:
+            // A few thick rising arms + a soft fill.
+            burstRing(shell.pos, n: Int(11 * boost), spd: 280...360, life: 1.2...1.6,
+                      size: 5...6.5, gravity: 380, drag: 0.5, color: 1, jitter: 0.1)
+            burstRing(shell.pos, n: Int(26 * boost), spd: 90...170, life: 0.8...1.2,
+                      size: 2...3, gravity: 300, drag: 0.7, color: 1, jitter: 0.8)
+        case .crossette:
+            // Split into a volley of mini-shells that pop on their own fuses.
+            for _ in 0..<Int(9 * boost) {
+                let ang = rng.range(0, 2 * .pi)
+                let spd = rng.range(190, 300)
+                shells.append(Shell(pos: shell.pos,
+                                    vel: NSPoint(x: cos(ang) * spd, y: sin(ang) * spd + 120),
+                                    detonateAt: ctx.now + Double(rng.range(0.3, 0.55)),
+                                    color: UInt8(rng.int(Self.palette.colors.count)),
+                                    kind: .crossette, power: 0, mini: true))
+            }
+        case .strobe:
+            // A hanging cloud of white strobes: quick stop, long twinkle.
+            burstRing(shell.pos, n: Int(55 * boost), spd: 150...280, life: 1.4...2.0,
+                      size: 2...3, gravity: 140, drag: 1.3, color: 6, jitter: 0.9)
+        }
+        // Charged rounds fire a second, faster wave for the double-ring look.
+        if shell.power > 0.55, shell.kind != .crossette {
+            burstRing(shell.pos, n: Int(70 * shell.power), spd: 420...520, life: 0.7...1.1,
+                      size: 2...3, gravity: 300, drag: 0.65,
+                      color: UInt8(rng.int(Self.palette.colors.count)), jitter: 0.15)
+        }
+        if ctx.now - lastBoom > 0.06 {
+            ctx.audio?.boom(intensity: shell.mini ? 0.3 : min(1, ctx.intensity + shell.power))
+            lastBoom = ctx.now
+        }
+    }
+
+    private func burstRing(_ pos: NSPoint, n: Int, spd: ClosedRange<CGFloat>, life: ClosedRange<Double>,
+                           size: ClosedRange<CGFloat>, gravity: CGFloat, drag: CGFloat,
+                           color: UInt8, jitter: CGFloat) {
+        for k in 0..<n {
+            let ang = CGFloat(k) * (2 * .pi / CGFloat(max(1, n))) + rng.range(-jitter, jitter)
+            let s = rng.range(spd.lowerBound, spd.upperBound)
+            pool.spawn(Particle(pos: pos,
+                                vel: NSPoint(x: cos(ang) * s, y: sin(ang) * s),
+                                birth: CACurrentMediaTime(), life: Double(rng.range(CGFloat(life.lowerBound), CGFloat(life.upperBound))),
+                                size: rng.range(size.lowerBound, size.upperBound),
+                                gravity: gravity, drag: drag,
+                                color: color, channel: UInt8(Channel.clicks.rawValue),
+                                additive: true, flicker: true))
+        }
     }
 
     func liveCount() -> Int { pool.count + shells.count }
@@ -140,15 +255,28 @@ final class FireworksScene: Scene {
             ctx.setFillColor(NSColor(white: 1, alpha: min(1, b)).cgColor)
             ctx.fillEllipse(in: CGRect(x: s.x - origin.x - 1, y: s.y - origin.y - 1, width: 2, height: 2))
         }
-        ctx.setBlendMode(.normal)
         // Shells.
-        ctx.setBlendMode(.plusLighter)
         ctx.setFillColor(NSColor(srgbRed: 1, green: 0.9, blue: 0.6, alpha: 1).cgColor)
         for s in shells {
-            ctx.fillEllipse(in: CGRect(x: s.pos.x - origin.x - 2, y: s.pos.y - origin.y - 2, width: 4, height: 4))
+            let r: CGFloat = s.mini ? 1.6 : 2
+            ctx.fillEllipse(in: CGRect(x: s.pos.x - origin.x - r, y: s.pos.y - origin.y - r, width: r * 2, height: r * 2))
         }
         ctx.setBlendMode(.normal)
         // Particles.
         pool.draw(into: ctx, origin: origin, palette: Self.palette, now: now)
+
+        // The charging muzzle: a swelling golden orb crackling at the cursor.
+        if chargeLevel > 0.02 {
+            let cx = smokeAnchor.map { $0.x - origin.x } ?? 0
+            let cy = smokeAnchor.map { $0.y - origin.y } ?? 0
+            let pulse = 1 + 0.08 * CGFloat(sin(now * 18))
+            let r = (6 + 22 * chargeLevel) * pulse
+            ctx.setBlendMode(.plusLighter)
+            ctx.setFillColor(NSColor(srgbRed: 1, green: 0.8, blue: 0.35, alpha: 0.55).cgColor)
+            ctx.fillEllipse(in: CGRect(x: cx - r * 1.7, y: cy - r * 1.7, width: r * 3.4, height: r * 3.4))
+            ctx.setFillColor(NSColor(srgbRed: 1, green: 0.95, blue: 0.75, alpha: 0.95).cgColor)
+            ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+            ctx.setBlendMode(.normal)
+        }
     }
 }

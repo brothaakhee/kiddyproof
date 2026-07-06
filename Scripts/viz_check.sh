@@ -5,7 +5,10 @@
 # anything about how an effect renders.
 set -euo pipefail
 SCENE="${1:?usage: viz_check.sh <SceneName> [white|gray|black] [secs]}"
-BG="${2:-}"
+# PRIVACY: the overlay is transparent — capturing without a test background
+# screenshots the user's REAL desktop (mail, code, credentials). Default to black
+# and never allow an empty background.
+BG="${2:-black}"
 SECS="${3:-12}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TAG="viz_$(echo "$SCENE" | tr '[:upper:] ' '[:lower:]_')${BG:+_$BG}"

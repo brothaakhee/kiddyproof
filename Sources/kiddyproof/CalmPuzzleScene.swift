@@ -6,7 +6,7 @@ import AppKit
 // reads on light AND dark wallpaper. A click is a soft gust; a keypress adds a piece.
 final class CalmPuzzleScene: Scene {
     let name = "Puzzle Pieces"
-    let category = SceneCategory.calm
+    let category = SceneCategory.archived
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

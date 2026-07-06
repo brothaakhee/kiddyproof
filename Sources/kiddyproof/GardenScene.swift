@@ -15,7 +15,7 @@ import AppKit
 // The garden persists for the whole session; oldest vines make way at the cap.
 final class GardenScene: Scene {
     let name = "Garden"
-    let category = SceneCategory.calm
+    let category = SceneCategory.archived
     let reactivity = Reactivity.calm
     let skin = CursorSkin.soft
     let veil: CGFloat = 0

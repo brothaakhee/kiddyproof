@@ -41,7 +41,9 @@ final class KidAudio {
     private var globalTick: UInt64 = 0
 
     private var notes: [AVAudioPCMBuffer] = []
-    private var bonkBuf, boomBuf, whooshBuf, burstBuf, droneBuf, vacuumBuf: AVAudioPCMBuffer?
+    private var drips: [AVAudioPCMBuffer] = []      // water droplets (Ripples' click voice)
+    private var bonkBuf, boomBuf, whooshBuf, burstBuf, glimmerBuf, droneBuf, vacuumBuf: AVAudioPCMBuffer?
+    private var rng = RNG(seed: 0xA0D10)
 
     private var lastPlay: [Int: TimeInterval] = [:]
     private var configToken: NSObjectProtocol?
@@ -150,6 +152,14 @@ final class KidAudio {
     func whoosh() { if let b = whooshBuf, !throttled(3, 0.09) { play(b, gain: 0.45) } }
     // Soft reverb-tailed "whoomph" — the black hole's release burst.
     func burst() { if let b = burstBuf, !throttled(4, 0.18) { play(b, gain: 0.6) } }   // sparse, soft whisper
+    // A water droplet "bloop" — the Ripples scene's click/heartbeat voice. Random pitch
+    // variant per call so a rhythm of drops never sounds like a sampler.
+    func drip(intensity: CGFloat = 1) {
+        guard !drips.isEmpty, !throttled(5, 0.06) else { return }
+        play(drips[rng.int(drips.count)], gain: 0.3 + 0.35 * Float(clamp01(intensity)))
+    }
+    // A soft glass chime — Drift's light wave rolling through the fireflies.
+    func glimmer() { if let b = glimmerBuf, !throttled(6, 0.12) { play(b, gain: 0.4) } }
 
     // MARK: Internals
 
@@ -176,7 +186,9 @@ final class KidAudio {
         let pent: [Double] = [261.63, 293.66, 329.63, 392.00, 440.00]
         notes = (pent + pent.map { $0 * 2 }).map { makeNote(freq: $0) }
         bonkBuf = makeBonk(); boomBuf = makeBoom(); whooshBuf = makeWhoosh()
-        burstBuf = makeBurst(); droneBuf = makeDrone(); vacuumBuf = makeVacuum()
+        burstBuf = makeBurst(); glimmerBuf = makeGlimmer()
+        droneBuf = makeDrone(); vacuumBuf = makeVacuum()
+        drips = [420.0, 540.0, 660.0, 800.0].map { makeDrip(freq: $0) }
     }
 
     // loop=true → no head/tail fade (callers ensure seamless waveforms).
@@ -236,6 +248,39 @@ final class KidAudio {
             return Float(0.34 * env * s)
         }!
     }
+    // A water droplet: the physics of a real drop is a tiny impact tick followed by a
+    // resonating bubble whose pitch RISES as it collapses — a sine chirp (f0 → ~2.2·f0)
+    // with a fast decay nails the familiar "bloop". The reverb gives it the pond.
+    private func makeDrip(freq f0: Double) -> AVAudioPCMBuffer {
+        var r = RNG(seed: UInt64(f0))
+        let tau = 2.0 * Double.pi
+        return makeBuffer(0.32) { _, t in
+            let attack: Double = t < 0.003 ? t / 0.003 : 1
+            let env = attack * exp(-t * 14)
+            // rising chirp: instantaneous freq f0·(1 + 2.4t) → phase integral below
+            let phase = tau * f0 * (t + 1.2 * t * t)
+            var s = sin(phase) * 0.8
+            s += sin(phase * 2) * 0.12                        // faint brightness
+            s += Double(r.unit() * 2 - 1) * exp(-t * 90) * 0.25   // the impact tick
+            return Float(0.3 * env * s)
+        }!
+    }
+
+    // A glass glimmer: two slightly inharmonic partials with a gentle attack and a long
+    // reverb-carried tail — light rolling through the field, nothing percussive.
+    private func makeGlimmer() -> AVAudioPCMBuffer {
+        let tau = 2.0 * Double.pi
+        let f = 880.0
+        return makeBuffer(1.1) { _, t in
+            let attack: Double = t < 0.025 ? t / 0.025 : 1
+            let env = attack * exp(-t * 3.6)
+            var s = sin(tau * f * t) * 0.6
+            s += sin(tau * f * 2.76 * t) * 0.22 * exp(-t * 6)   // bell-like inharmonic sparkle
+            s += sin(tau * f * 0.5 * t) * 0.2                   // warm under-octave
+            return Float(0.16 * env * s)
+        }!
+    }
+
     // Seamless 8s ambient bed: low detuned sines + a slow 0.25Hz swell.
     private func makeDrone() -> AVAudioPCMBuffer {
         let tau = 2.0 * Double.pi

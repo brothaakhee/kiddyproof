@@ -126,7 +126,7 @@ final class CalmDriftScene: Scene {
             ctx.audio?.note(for: keyString(event), intensity: ctx.intensity)
         case .click(let pt, .left):
             pulses.append(Pulse(pos: pt, birth: ctx.now, color: rng.int(Self.cores.count)))
-            ctx.audio?.whoosh()
+            ctx.audio?.glimmer()   // light rolling through the field — glass, not wind
         case .scroll(let dy):
             // A breeze that builds: gust strength follows the scroll size, and repeated
             // scrolling STACKS (up to a firm-but-calm ceiling) before decaying away.

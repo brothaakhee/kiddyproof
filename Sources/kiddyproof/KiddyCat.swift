@@ -13,6 +13,11 @@ import AppKit
 // Adaptive silhouette: near-black over light backgrounds, warm silver over dark.
 final class KiddyCat {
 
+    // Two looks, one brain: the elegant silhouette and the chunky arcade mascot
+    // share the same skeleton, gait, tail physics, and behavior states.
+    enum Style { case silhouette, arcade }
+    var style: Style = .silhouette
+
     enum State: String {
         case idle, sit, groom, stretch, walk, trot, stalk, pounceWindup, pounceAir, land, startle
     }
@@ -227,8 +232,11 @@ final class KiddyCat {
 
     private func updateTail(dt: CGFloat) {
         let pose = currentPose()
-        let root = NSPoint(x: pos.x - facing * size * (state == .sit || state == .groom ? 0.62 : 0.92),
-                           y: pos.y + size * pose.rumpHeight)
+        let rootBack: CGFloat = style == .arcade
+            ? (state == .sit || state == .groom ? 0.42 : 0.52)
+            : (state == .sit || state == .groom ? 0.62 : 0.92)
+        let root = NSPoint(x: pos.x - facing * size * rootBack,
+                           y: pos.y + size * pose.rumpHeight * (style == .arcade ? 0.72 : 1))
         let seg = size * 0.15
         let (lift, sway) = tailMood()
         // Verlet integrate.
@@ -375,8 +383,13 @@ final class KiddyCat {
 
     // MARK: Draw
 
-    // Colors adapt: ink cat on light pixels, warm silver cat on dark.
     func draw(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
+        if style == .arcade { drawArcade(into: ctx, origin: origin, inkW: w); return }
+        drawSilhouette(into: ctx, origin: origin, inkW: w)
+    }
+
+    // Colors adapt: ink cat on light pixels, warm silver cat on dark.
+    private func drawSilhouette(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
         let pose = currentPose()
         let s = size
         let f = facing
@@ -556,4 +569,182 @@ final class KiddyCat {
         ctx.setAlpha(1)
     }
 
+
+    // MARK: Arcade style — chunky chibi mascot: big head, big tracking eye, bold
+    // outlines, squash & stretch. Same pose anchors as the silhouette.
+    private func drawArcade(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
+        let pose = currentPose()
+        let s = size
+        let f = facing
+        let gx = pos.x - origin.x
+        let gy = pos.y - origin.y
+
+        // Palette: orange tabby with a cream chest, dark chocolate outline.
+        let fur = NSColor(srgbRed: 0.99, green: 0.62, blue: 0.24, alpha: 1)
+        let furShade = NSColor(srgbRed: 0.9, green: 0.5, blue: 0.17, alpha: 1)
+        let cream = NSColor(srgbRed: 1.0, green: 0.94, blue: 0.82, alpha: 1)
+        let outline = NSColor(srgbRed: 0.28, green: 0.16, blue: 0.1, alpha: 1)
+        let pink = NSColor(srgbRed: 1.0, green: 0.62, blue: 0.66, alpha: 1)
+        let lineW = s * 0.055
+
+        @inline(__always) func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: gx + x * f * s, y: gy + y * s)
+        }
+        func fillStroke(_ path: CGPath, _ fill: NSColor) {
+            ctx.addPath(path); ctx.setFillColor(fill.cgColor); ctx.fillPath()
+            ctx.addPath(path); ctx.setStrokeColor(outline.cgColor); ctx.setLineWidth(lineW); ctx.strokePath()
+        }
+
+        // Squash & stretch: arcade exaggeration on top of the pose.
+        let squash = 1 - pose.crouch * 0.3 + pose.bodyStretch * 0.2
+        let shoulderX: CGFloat = (0.44 - pose.sitFold * 0.22)
+        let rumpX: CGFloat = -0.5
+        let shoulderY = pose.shoulderHeight * 0.82 * squash
+        let rumpY = pose.rumpHeight * 0.82 * squash
+        let headX = pose.headForward * 0.58
+        let headY = (pose.headHeight * 0.92 + 0.04) * squash
+        let stride = strideLength()
+
+        ctx.setLineCap(.round)
+        ctx.setLineJoin(.round)
+        ctx.setAlpha(1)
+        ctx.setBlendMode(.normal)
+
+        // --- Tail: fat outlined rope with the same verlet points ---
+        let tailPath = CGMutablePath()
+        tailPath.move(to: CGPoint(x: tail[0].x - origin.x, y: tail[0].y - origin.y))
+        for i in 1..<tail.count {
+            tailPath.addLine(to: CGPoint(x: tail[i].x - origin.x, y: tail[i].y - origin.y))
+        }
+        ctx.addPath(tailPath); ctx.setStrokeColor(outline.cgColor); ctx.setLineWidth(s * 0.3); ctx.strokePath()
+        ctx.addPath(tailPath); ctx.setStrokeColor(fur.cgColor); ctx.setLineWidth(s * 0.3 - lineW * 2); ctx.strokePath()
+
+        // --- Legs (far pair shaded) ---
+        func leg(front: Bool, far: Bool) {
+            let legIdx = (front ? 0 : 2) + (far ? 1 : 0)
+            let rootX = front ? shoulderX - 0.02 : rumpX + 0.12
+            let rootY = front ? shoulderY - 0.1 : rumpY - 0.08
+            var footX = rootX
+            var footY: CGFloat = 0
+            if pose.sitFold > 0.5 && !front {
+                footX = rootX + 0.3; footY = 0
+            } else {
+                let (dx, lift) = footOffset(legIdx, stride: stride / s)
+                footX = rootX + dx
+                footY = lift / s
+                if state == .pounceAir { footX = rootX + (front ? 0.3 : -0.26); footY = 0.24 }
+            }
+            let path = CGMutablePath()
+            path.move(to: P(rootX, rootY))
+            path.addQuadCurve(to: P(footX, footY + 0.05),
+                              control: P((rootX + footX) / 2 + (front ? -0.06 : 0.1), (rootY + footY) / 2))
+            ctx.addPath(path); ctx.setStrokeColor(outline.cgColor); ctx.setLineWidth(s * 0.3); ctx.strokePath()
+            ctx.addPath(path); ctx.setStrokeColor((far ? furShade : fur).cgColor)
+            ctx.setLineWidth(s * 0.3 - lineW * 2); ctx.strokePath()
+        }
+        leg(front: true, far: true)
+        leg(front: false, far: true)
+
+        // --- Body: one plump bean ---
+        let body = CGMutablePath()
+        let midTop = max(shoulderY, rumpY) + 0.16 + pose.backArch
+        let belly: CGFloat = 0.2 - pose.crouch * 0.1   // high enough that legs SHOW
+        body.move(to: P(rumpX - 0.18, rumpY * 0.5))
+        body.addQuadCurve(to: P((rumpX + shoulderX) / 2, midTop), control: P(rumpX - 0.26, rumpY + 0.18))
+        // Chest rises to tuck UNDER the skull — head and body must overlap, never gap.
+        body.addQuadCurve(to: P(headX + 0.1, headY - 0.1), control: P(shoulderX + 0.26, shoulderY + 0.1))
+        body.addQuadCurve(to: P(shoulderX + 0.1, belly), control: P(headX + 0.02, belly + 0.1))
+        body.addQuadCurve(to: P(rumpX - 0.18, rumpY * 0.5), control: P(rumpX * 0.4, belly - 0.06))
+        body.closeSubpath()
+        fillStroke(body, fur)
+
+        // Cream chest patch.
+        let chest = CGMutablePath()
+        chest.addEllipse(in: CGRect(x: P(shoulderX - 0.04, 0.02).x - s * 0.19 * f,
+                                    y: P(0, 0.02).y, width: s * 0.38, height: s * (shoulderY * 0.62)))
+        ctx.addPath(chest); ctx.setFillColor(cream.cgColor); ctx.fillPath()
+
+        // --- Near legs over the body ---
+        leg(front: true, far: false)
+        leg(front: false, far: false)
+
+        // --- Head: BIG circle with ears, face, whiskers ---
+        let hp = headPitch
+        let R: CGFloat = 0.46
+        let hcx = headX, hcy = headY + hp * 0.2
+        let headC = P(hcx, hcy)
+        let Rs = R * s
+
+        // Ears first (behind the head): outlined triangles with pink inner.
+        let earLen = R * (0.55 + 0.45 * pose.earPerk)
+        let flick = earFlick * 0.1
+        func ear(_ baseA: CGFloat, _ tipA: CGFloat) {
+            let e = CGMutablePath()
+            let a1 = baseA - 0.4, a2 = baseA + 0.4
+            e.move(to: P(hcx + cos(a1) * R * 0.9, hcy + sin(a1) * R * 0.9))
+            e.addLine(to: P(hcx + cos(tipA) * (R * 0.72 + earLen), hcy + sin(tipA) * (R * 0.72 + earLen)))
+            e.addLine(to: P(hcx + cos(a2) * R * 0.9, hcy + sin(a2) * R * 0.9))
+            e.closeSubpath()
+            fillStroke(e, fur)
+            // Pink inner ear.
+            let inner = CGMutablePath()
+            let m1 = baseA - 0.2, m2 = baseA + 0.2
+            inner.move(to: P(hcx + cos(m1) * R * 0.88, hcy + sin(m1) * R * 0.88))
+            inner.addLine(to: P(hcx + cos(tipA) * (R * 0.72 + earLen * 0.62), hcy + sin(tipA) * (R * 0.72 + earLen * 0.62)))
+            inner.addLine(to: P(hcx + cos(m2) * R * 0.88, hcy + sin(m2) * R * 0.88))
+            inner.closeSubpath()
+            ctx.addPath(inner); ctx.setFillColor(pink.cgColor); ctx.fillPath()
+        }
+        ear(2.25, 2.35 + flick)
+        ear(0.92, 0.8)
+
+        // Skull.
+        let skull = CGMutablePath()
+        skull.addEllipse(in: CGRect(x: headC.x - Rs, y: headC.y - Rs, width: Rs * 2, height: Rs * 2))
+        fillStroke(skull, fur)
+
+        // Cream muzzle patch (lower front of the face).
+        let mz = P(hcx + R * 0.42, hcy - R * 0.34)
+        ctx.setFillColor(cream.cgColor)
+        ctx.fillEllipse(in: CGRect(x: mz.x - Rs * 0.42, y: mz.y - Rs * 0.3, width: Rs * 0.84, height: Rs * 0.6))
+
+        // Big eye with a pupil that TRACKS the interest point (instant charm).
+        let eyeOpen = 1 - blinkPhase
+        let ec = P(hcx + R * 0.3, hcy + R * 0.18)
+        let ew = Rs * 0.3, eh = Rs * 0.34 * max(0.12, eyeOpen)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.fillEllipse(in: CGRect(x: ec.x - ew, y: ec.y - eh, width: ew * 2, height: eh * 2))
+        ctx.setStrokeColor(outline.cgColor); ctx.setLineWidth(lineW * 0.8)
+        ctx.strokeEllipse(in: CGRect(x: ec.x - ew, y: ec.y - eh, width: ew * 2, height: eh * 2))
+        if eyeOpen > 0.15 {
+            var px: CGFloat = 0, py: CGFloat = 0
+            if let i = interest {
+                let dx = (i.x - pos.x) * facing, dy = i.y - pos.y - size
+                let m = max(60, sqrt(dx * dx + dy * dy))
+                px = dx / m * ew * 0.35; py = dy / m * eh * 0.3
+            }
+            let pr = ew * 0.52
+            ctx.setFillColor(outline.cgColor)
+            ctx.fillEllipse(in: CGRect(x: ec.x + px * f - pr, y: ec.y + py - pr * 1.25,
+                                       width: pr * 2, height: pr * 2.5))
+            // Sparkle.
+            ctx.setFillColor(NSColor.white.cgColor)
+            ctx.fillEllipse(in: CGRect(x: ec.x + px * f - pr * 0.3, y: ec.y + py + pr * 0.3,
+                                       width: pr * 0.55, height: pr * 0.55))
+        }
+
+        // Nose + whiskers.
+        let nose = P(hcx + R * 0.78, hcy - R * 0.08)
+        ctx.setFillColor(pink.cgColor)
+        ctx.fillEllipse(in: CGRect(x: nose.x - Rs * 0.08, y: nose.y - Rs * 0.06, width: Rs * 0.16, height: Rs * 0.12))
+        ctx.setStrokeColor(outline.withAlphaComponent(0.85).cgColor)
+        ctx.setLineWidth(lineW * 0.55)
+        for (dy, tilt) in [(0.02, 0.1), (-0.08, 0.0), (-0.18, -0.1)] {
+            ctx.beginPath()
+            ctx.move(to: P(hcx + R * 0.62, hcy - R * 0.18 + dy))
+            ctx.addLine(to: P(hcx + R * 1.5, hcy - R * 0.18 + dy + tilt))
+            ctx.strokePath()
+        }
+        ctx.setAlpha(1)
+    }
 }

@@ -42,7 +42,7 @@ final class OverlayWindowManager: NSObject {
         CalmBlackholeScene(), FireworksScene(), PhysicsScene(),
         CalmDriftScene(), CalmConstellationScene(), CalmRipplesScene(), CalmPetalsScene(),
         CalmGravitationalScene(), CalmSpiderwebScene(), CalmPuzzleScene(),
-        KaleidoscopeScene(), GardenScene(), MusicBoxScene(),
+        KaleidoscopeScene(), GardenScene(), MusicBoxScene(), CatLabScene(),
     ])
     // Optional slow-motion for inspecting a scene in the isolation harness (KP_SLOMO).
     private let slomo: CGFloat = {

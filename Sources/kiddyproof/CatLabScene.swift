@@ -54,7 +54,11 @@ final class CatLabScene: Scene {
         if cat == nil {
             let ground = ctx.bounds.minY + 140
             let c = KiddyCat(at: NSPoint(x: ctx.bounds.midX - 200, y: ground), groundY: ground, size: 58)
-            if ProcessInfo.processInfo.environment["KP_CATSTYLE"] == "arcade" { c.style = .arcade }
+            switch ProcessInfo.processInfo.environment["KP_CATSTYLE"] {
+            case "arcade": c.style = .arcade
+            case "pixel": c.style = .pixel
+            default: break
+            }
             cat = c
         }
         guard let cat = cat else { return }

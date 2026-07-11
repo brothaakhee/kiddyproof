@@ -15,7 +15,7 @@ final class KiddyCat {
 
     // Two looks, one brain: the elegant silhouette and the chunky arcade mascot
     // share the same skeleton, gait, tail physics, and behavior states.
-    enum Style { case silhouette, arcade }
+    enum Style { case silhouette, arcade, pixel }
     var style: Style = .silhouette
 
     enum State: String {
@@ -384,11 +384,60 @@ final class KiddyCat {
     // MARK: Draw
 
     func draw(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
+        if style == .pixel { drawPixel(into: ctx, origin: origin); return }
         if style == .arcade { drawArcade(into: ctx, origin: origin, inkW: w); return }
         drawSilhouette(into: ctx, origin: origin, inkW: w)
     }
 
     // Colors adapt: ink cat on light pixels, warm silver cat on dark.
+    // MARK: 8-bit style — authored sprite frames, chosen by the shared brain.
+    // The rig still drives everything (position, facing, gait phase, blink, states);
+    // the pixel style just quantizes it into discrete frames on a crisp integer grid.
+
+    private func pixelFrame() -> (String, [String]) {
+        switch state {
+        case .walk, .trot:
+            let frames = [KiddyCatPixel.walk1, KiddyCatPixel.walk2, KiddyCatPixel.walk3, KiddyCatPixel.walk4]
+            let i = min(3, max(0, Int(gaitPhase * 4)))
+            return ("walk\(i)", frames[i])
+        case .sit, .groom:
+            return blinkPhase > 0.4 ? ("sit2", KiddyCatPixel.sit2) : ("sit1", KiddyCatPixel.sit1)
+        case .stalk, .pounceWindup:
+            let i = min(1, max(0, Int(gaitPhase * 2)))
+            return i == 0 ? ("stalk1", KiddyCatPixel.stalk1) : ("stalk2", KiddyCatPixel.stalk2)
+        case .pounceAir:
+            return ("pounce", KiddyCatPixel.pounce)
+        case .land:
+            return ("stalk1", KiddyCatPixel.stalk1)   // compressed crouch on touchdown
+        case .stretch:
+            return ("stretch", KiddyCatPixel.stretch)
+        case .startle:
+            return ("startle", KiddyCatPixel.startle)
+        default:
+            return blinkPhase > 0.4 ? ("idle2", KiddyCatPixel.idle2) : ("idle1", KiddyCatPixel.idle1)
+        }
+    }
+
+    private func drawPixel(into ctx: CGContext, origin: CGPoint) {
+        let (key, rows) = pixelFrame()
+        let img = KiddyCatPixel.image(key, rows)
+        // Integer scale + integer screen coords + interpolation OFF = crisp pixels.
+        let scale = max(3, (size / 11).rounded())
+        let w = CGFloat(img.width) * scale
+        let h = CGFloat(img.height) * scale
+        let x = (pos.x - origin.x).rounded()
+        // Classic gait bob: passing frames ride one pixel higher than contact frames.
+        let bob: CGFloat = (key == "walk1" || key == "walk3") ? scale : 0
+        let y = (pos.y - origin.y).rounded() + bob
+        ctx.saveGState()
+        ctx.interpolationQuality = .none
+        ctx.setBlendMode(.normal); ctx.setAlpha(1)
+        ctx.translateBy(x: x, y: y)
+        if facing < 0 { ctx.scaleBy(x: -1, y: 1) }
+        ctx.draw(img, in: CGRect(x: -w / 2, y: 0, width: w, height: h))
+        ctx.restoreGState()
+    }
+
     private func drawSilhouette(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
         let pose = currentPose()
         let s = size

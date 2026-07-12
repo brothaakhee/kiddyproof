@@ -577,6 +577,107 @@ final class KiddyCat {
 
         ctx.setAlpha(1)
         ctx.setBlendMode(.normal)
+        ctx.setLineCap(.round)
+        let accent = NSColor(white: 0.05 + 0.90 * w, alpha: 0.85)
+        let eyeOpen = 1 - blinkPhase
+
+        // Front face renderer (shared by parametric and traced heads).
+        func frontFace(_ fcx: CGFloat, _ fcy: CGFloat, _ fhw: CGFloat, _ fhh: CGFloat,
+                       sleepy: Bool = false) {
+            let fy = headPitch * 0.05
+            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(s * 0.017)
+            for side: CGFloat in [-1, 1] {
+                for (dy, len) in [(CGFloat(0.02), CGFloat(0.22)), (CGFloat(-0.05), CGFloat(0.26)), (CGFloat(-0.12), CGFloat(0.21))] {
+                    ctx.beginPath()
+                    ctx.move(to: P(fcx + side * fhw * 0.55, fcy + fy - 0.10 + dy * 0.5))
+                    ctx.addLine(to: P(fcx + side * (fhw * 0.55 + len), fcy + fy - 0.10 + dy))
+                    ctx.strokePath()
+                }
+            }
+            for side: CGFloat in [-1, 1] {
+                ctx.beginPath()
+                ctx.move(to: P(fcx + side * fhw * 0.44, fcy + fhh * 0.68))
+                ctx.addLine(to: P(fcx + side * fhw * 0.70, fcy + fhh * 1.08))
+                ctx.strokePath()
+            }
+            if sleepy {
+                // Content closed eyes (the sheet's loafing cat is asleep): two ∩ arcs.
+                ctx.setStrokeColor(accent.withAlphaComponent(0.95).cgColor)
+                ctx.setLineWidth(s * 0.026)
+                for side: CGFloat in [-1, 1] {
+                    let e = P(fcx + side * fhw * 0.40, fcy + fy + fhh * 0.10)
+                    ctx.beginPath()
+                    ctx.move(to: CGPoint(x: e.x - s * 0.062 * f, y: e.y - s * 0.012))
+                    ctx.addQuadCurve(to: CGPoint(x: e.x + s * 0.062 * f, y: e.y - s * 0.012),
+                                     control: CGPoint(x: e.x, y: e.y + s * 0.075))
+                    ctx.strokePath()
+                }
+            } else if eyeOpen > 0.08 {
+                let ew = s * 0.062, eh = s * 0.078 * eyeOpen
+                for side: CGFloat in [-1, 1] {
+                    let e = P(fcx + side * fhw * 0.40, fcy + fy + fhh * 0.10)
+                    ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
+                    ctx.setFillColor(bodyColor.cgColor)
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.30, y: e.y - eh * 0.48, width: ew * 0.60, height: eh * 0.96))
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.58, width: ew * 2.2, height: eh * 1.2))
+                }
+            }
+            ctx.setFillColor(accent.withAlphaComponent(0.9).cgColor)
+            let np = P(fcx, fcy + fy - fhh * 0.34)
+            let nw = s * 0.045
+            let nose = CGMutablePath()
+            nose.move(to: CGPoint(x: np.x - nw, y: np.y + nw * 0.7))
+            nose.addLine(to: CGPoint(x: np.x + nw, y: np.y + nw * 0.7))
+            nose.addLine(to: CGPoint(x: np.x, y: np.y - nw * 0.8))
+            nose.closeSubpath()
+            ctx.addPath(nose)
+            ctx.fillPath()
+            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(s * 0.016)
+            let mc = P(fcx, fcy + fy - fhh * 0.52)
+            ctx.beginPath()
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.05))
+            ctx.addLine(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.addQuadCurve(to: CGPoint(x: mc.x - s * 0.075, y: mc.y + s * 0.035),
+                             control: CGPoint(x: mc.x - s * 0.045, y: mc.y - s * 0.02))
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.addQuadCurve(to: CGPoint(x: mc.x + s * 0.075, y: mc.y + s * 0.035),
+                             control: CGPoint(x: mc.x + s * 0.045, y: mc.y - s * 0.02))
+            ctx.strokePath()
+        }
+
+        // --- TRACED reference silhouettes for settled static poses: the resting
+        // cat IS the sheet's outline (digitized), while the rig owns all motion.
+        let tracedPose: ([(CGFloat, CGFloat)], CGFloat, (CGFloat, CGFloat, CGFloat), [[(CGFloat, CGFloat)]])? = {
+            guard blend >= 1, abs(speed) < 1, stateTime > 0.9 else { return nil }
+            switch state {
+            case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents)
+            case .lie:  return (KiddyCatTraced.loaf, KiddyCatTraced.loafScale, KiddyCatTraced.loafFace, KiddyCatTraced.loafAccents)
+            case .idle: return (KiddyCatTraced.stand, KiddyCatTraced.standScale, KiddyCatTraced.standFace, KiddyCatTraced.standAccents)
+            default: return nil
+            }
+        }()
+        if let (tpts, tscale, tface, taccents) = tracedPose {
+            // Sheet cats face left; negate x so trace-forward = P-forward.
+            let pts = tpts.map { P(-$0.0 * tscale, $0.1 * tscale) }
+            ctx.setFillColor(bodyColor.cgColor)
+            ctx.addPath(Self.catmull(pts, closed: true))
+            ctx.fillPath()
+            // Accent strokes extracted from the same reference mask.
+            ctx.setStrokeColor(accent.cgColor)
+            ctx.setLineWidth(s * 0.028)
+            for stroke in taccents {
+                ctx.addPath(Self.catmull(stroke.map { P(-$0.0 * tscale, $0.1 * tscale) }, closed: false))
+                ctx.strokePath()
+            }
+            frontFace(-tface.0 * tscale, tface.1 * tscale, tface.2 * tscale, tface.2 * tscale * 0.88,
+                      sleepy: state == .lie)
+            ctx.setAlpha(1)
+            return
+        }
 
         // --- Legs: filled tapered limbs with real anatomy — wide thigh/shoulder,
         // a hock (reverse heel) on the rear leg, slim pastern, rounded paw.
@@ -774,7 +875,6 @@ final class KiddyCat {
 
         // --- Accent lines: thin background-colored strokes carving the haunch
         // and foreleg out of the solid fill — the reference style's signature.
-        let accent = NSColor(white: 0.05 + 0.90 * w, alpha: 0.85)
         ctx.setStrokeColor(accent.cgColor)
         ctx.setLineWidth(s * 0.028)
         ctx.setLineCap(.round)
@@ -798,7 +898,6 @@ final class KiddyCat {
 
         // --- Face. Profile: side eye + forward whiskers (action cats in the
         // reference). Front: two eyes, nose, ω mouth, whiskers both sides.
-        let eyeOpen = 1 - blinkPhase
         if profileHead {
             // Whiskers fanning forward from the muzzle.
             ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
@@ -824,62 +923,7 @@ final class KiddyCat {
                 ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.55, width: ew * 2.2, height: eh * 1.1))
             }
         } else {
-            let fy = hp * 0.05
-            // Whiskers.
-            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
-            ctx.setLineWidth(s * 0.017)
-            for side: CGFloat in [-1, 1] {
-                for (dy, len) in [(CGFloat(0.02), CGFloat(0.22)), (CGFloat(-0.05), CGFloat(0.26)), (CGFloat(-0.12), CGFloat(0.21))] {
-                    ctx.beginPath()
-                    ctx.move(to: P(hcx + side * hw * 0.55, hcy + fy - 0.10 + dy * 0.5))
-                    ctx.addLine(to: P(hcx + side * (hw * 0.55 + len), hcy + fy - 0.10 + dy))
-                    ctx.strokePath()
-                }
-            }
-            // Inner-ear lines.
-            for side: CGFloat in [-1, 1] {
-                ctx.beginPath()
-                ctx.move(to: P(hcx + side * hw * 0.44, hcy + hh * 0.68))
-                ctx.addLine(to: P(hcx + side * hw * 0.70, hcy + hh * 1.08))
-                ctx.strokePath()
-            }
-            // Eyes (blink scales height): light almonds, round pupils, calm lids.
-            if eyeOpen > 0.08 {
-                let ew = s * 0.062, eh = s * 0.078 * eyeOpen
-                for side: CGFloat in [-1, 1] {
-                    let e = P(hcx + side * hw * 0.40, hcy + fy + hh * 0.10)
-                    ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
-                    ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
-                    ctx.setFillColor(bodyColor.cgColor)
-                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.30, y: e.y - eh * 0.48, width: ew * 0.60, height: eh * 0.96))
-                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.58, width: ew * 2.2, height: eh * 1.2))
-                }
-            }
-            // Nose: a tiny light triangle, point down.
-            ctx.setFillColor(accent.withAlphaComponent(0.9).cgColor)
-            let np = P(hcx, hcy + fy - hh * 0.34)
-            let nw = s * 0.045
-            let nose = CGMutablePath()
-            nose.move(to: CGPoint(x: np.x - nw, y: np.y + nw * 0.7))
-            nose.addLine(to: CGPoint(x: np.x + nw, y: np.y + nw * 0.7))
-            nose.addLine(to: CGPoint(x: np.x, y: np.y - nw * 0.8))
-            nose.closeSubpath()
-            ctx.addPath(nose)
-            ctx.fillPath()
-            // Mouth: the little ω under the nose.
-            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
-            ctx.setLineWidth(s * 0.016)
-            let mc = P(hcx, hcy + fy - hh * 0.52)
-            ctx.beginPath()
-            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.05))
-            ctx.addLine(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-            ctx.addQuadCurve(to: CGPoint(x: mc.x - s * 0.075, y: mc.y + s * 0.035),
-                             control: CGPoint(x: mc.x - s * 0.045, y: mc.y - s * 0.02))
-            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-            ctx.addQuadCurve(to: CGPoint(x: mc.x + s * 0.075, y: mc.y + s * 0.035),
-                             control: CGPoint(x: mc.x + s * 0.045, y: mc.y - s * 0.02))
-            ctx.strokePath()
+            frontFace(hcx, hcy, hw, hh)
         }
         ctx.setAlpha(1)
     }

@@ -559,7 +559,7 @@ final class KiddyCat {
                     (footX - 0.005, footY + 0.14),
                     (footX, footY + 0.05),
                 ])
-                path = Self.ribbon(pts, [s * 0.21, s * 0.135, s * 0.10, s * 0.095])
+                path = Self.ribbon(pts, [s * 0.25, s * 0.165, s * 0.125, s * 0.12])
             } else {
                 // Hip → knee (forward) → hock (heel points BACK — the cat cue) → paw.
                 let fold = 1 - sit
@@ -569,12 +569,12 @@ final class KiddyCat {
                     (footX - 0.07 * fold, footY + 0.17),
                     (footX, footY + 0.05),
                 ])
-                path = Self.ribbon(pts, [s * 0.36, s * 0.21, s * 0.11, s * 0.10])
+                path = Self.ribbon(pts, [s * 0.38, s * 0.24, s * 0.135, s * 0.125])
             }
             ctx.addPath(path)
             ctx.fillPath()
             // Paw: a soft rounded oval, slightly forward.
-            let pw = s * 0.10
+            let pw = s * 0.115
             let pp = P(footX + 0.055, footY + 0.045)
             ctx.fillEllipse(in: CGRect(x: pp.x - pw, y: pp.y - pw * 0.72, width: pw * 2, height: pw * 1.44))
         }
@@ -588,7 +588,7 @@ final class KiddyCat {
             let n = pts.count
             let widths = (0..<n).map { i -> CGFloat in
                 let t = CGFloat(i) / CGFloat(n - 1)
-                return s * (0.155 - 0.055 * t * t)
+                return s * (0.175 - 0.075 * t * t)
             }
             ctx.setFillColor(bodyColor.cgColor)
             ctx.addPath(Self.ribbon(pts, widths))
@@ -599,7 +599,7 @@ final class KiddyCat {
         // cat profile (crown → brow → nose STEP → chin → jaw), not a circle —
         // the muzzle step is what the reference silhouettes live on.
         let hp = headPitch
-        let R: CGFloat = 0.33
+        let R: CGFloat = 0.36
         let hcx = headX - 0.09, hcy = headY - 0.13 + hp * 0.22
         // Head-relative point, gently rotated by head pitch.
         let ca = cos(hp * 0.5), sa = sin(hp * 0.5)
@@ -610,15 +610,15 @@ final class KiddyCat {
         let bellyY = shoulderY - 0.50 + pose.crouch * 0.22
         var outline: [(CGFloat, CGFloat)] = []
         outline.append(H(R * 0.15, -R * 0.94))                              // under jaw
-        outline.append((shoulderX + 0.14 + sit * 0.11, shoulderY - 0.34 - sit * 0.04)) // chest
+        outline.append((shoulderX + 0.18 + sit * 0.11, shoulderY - 0.40 - sit * 0.02)) // chest
         outline.append(((shoulderX + rumpX) / 2 + 0.06, bellyY))            // belly
         outline.append((rumpX + 0.30, rumpY - 0.38 - sit * 0.10))           // groin / thigh front
         outline.append((rumpX - 0.16, rumpY - 0.30 - sit * 0.12))           // under tail
-        outline.append((rumpX - 0.24 - sit * 0.06, rumpY + 0.02))           // rump back
-        outline.append((rumpX - 0.12, rumpY + 0.18 + pose.backArch * 0.5))  // rump top
+        outline.append((rumpX - 0.28 - sit * 0.06, rumpY + 0.02))           // rump back
+        outline.append((rumpX - 0.12, rumpY + 0.21 + pose.backArch * 0.5))  // rump top
         outline.append(((rumpX + shoulderX) / 2, spineTopY))                // spine crest
         outline.append((shoulderX - 0.02 - sit * 0.10, shoulderY + 0.19 + sit * 0.06 + pose.backArch * 0.3)) // withers
-        outline.append((shoulderX + 0.16 - sit * 0.08, shoulderY + 0.06 + sit * 0.26)) // neck top
+        outline.append((shoulderX + 0.20 - sit * 0.08, shoulderY + 0.08 + sit * 0.26)) // neck top
         outline.append(H(-R * 0.70, R * 0.62))                              // crown back
         outline.append(H(-R * 0.12, R * 0.98))                              // crown top
         outline.append(H(R * 0.55, R * 0.82))                               // brow
@@ -633,7 +633,7 @@ final class KiddyCat {
 
         // Ears: big, slightly canted outward, convex outer edge (reference cue).
         let flick = earFlick * 0.1
-        let earLen = R * (0.66 + 0.38 * pose.earPerk)
+        let earLen = R * (0.60 + 0.36 * pose.earPerk)
         func ear(baseA: CGFloat, tipA: CGFloat, tipLen: CGFloat) {
             let e = CGMutablePath()
             let a1 = baseA - 0.36, a2 = baseA + 0.36
@@ -646,8 +646,8 @@ final class KiddyCat {
             ctx.addPath(e)
             ctx.fillPath()
         }
-        ear(baseA: 1.84 + hp * 0.5, tipA: 1.94 + hp * 0.5 + flick, tipLen: earLen) // rear ear
-        ear(baseA: 1.22 + hp * 0.5, tipA: 1.10 + hp * 0.5, tipLen: earLen)         // front ear
+        ear(baseA: 1.70 + hp * 0.5, tipA: 1.78 + hp * 0.5 + flick, tipLen: earLen * 0.88) // rear ear
+        ear(baseA: 1.26 + hp * 0.5, tipA: 1.14 + hp * 0.5, tipLen: earLen)         // front ear
 
         // Sitting: haunch mass over the folded rear, blended into the outline.
         if sit > 0.15 {
@@ -669,8 +669,8 @@ final class KiddyCat {
         // Haunch: a sweeping thigh arc from the tail root around and down.
         let haunch = CGMutablePath()
         haunch.move(to: P(rumpX + 0.04 + sit * 0.04, rumpY + 0.02 + sit * 0.08))
-        haunch.addQuadCurve(to: P(rumpX + 0.28 + sit * 0.12, rumpY - 0.52 + sit * 0.18),
-                            control: P(rumpX + 0.44 + sit * 0.06, rumpY - 0.10))
+        haunch.addQuadCurve(to: P(rumpX + 0.22 + sit * 0.12, rumpY - 0.50 + sit * 0.18),
+                            control: P(rumpX + 0.40 + sit * 0.06, rumpY - 0.16))
         ctx.addPath(haunch)
         ctx.strokePath()
         // Foreleg: a short line separating the near front leg from the chest.

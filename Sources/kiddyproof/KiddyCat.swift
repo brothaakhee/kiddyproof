@@ -234,7 +234,7 @@ final class KiddyCat {
         case .walk, .trot: return (0.75, 1.0)             // raised, confident
         case .startle: return (1.1, 0)                    // bottle-brush up
         case .pounceAir: return (0.2, 0)                  // streams back in flight
-        case .sit, .groom, .lie: return (0.05, 0.35)      // wrapped low
+        case .sit, .groom, .lie: return (0.14, 0.35)      // wrapped low, tip curled
         default: return (0.55, 0.6)
         }
     }
@@ -243,7 +243,7 @@ final class KiddyCat {
         let pose = currentPose()
         let rootBack: CGFloat = style == .arcade
             ? (state == .sit || state == .groom ? 0.42 : 0.52)
-            : (state == .sit || state == .groom ? 0.58 : 0.72)
+            : (state == .sit || state == .groom ? 0.54 : 0.64)
         let root = NSPoint(x: pos.x - facing * size * rootBack,
                            y: pos.y + size * pose.rumpHeight * (style == .arcade ? 0.72 : 0.88))
         let seg = size * 0.18
@@ -645,7 +645,7 @@ final class KiddyCat {
         outline.append(((rumpX + shoulderX) / 2, spineTopY))                // spine crest
         outline.append((shoulderX - 0.02 - sit * 0.10, shoulderY + 0.19 + sit * 0.06 + pose.backArch * 0.3)) // withers
         outline.append((shoulderX + 0.20 - sit * 0.08, shoulderY + 0.08 + sit * 0.26)) // neck top
-        outline.append(H(-R * 0.70, R * 0.62))                              // crown back
+        outline.append(H(-R * 0.66, R * 0.55))                              // crown back
         outline.append(H(-R * 0.12, R * 0.98))                              // crown top
         outline.append(H(R * 0.55, R * 0.82))                               // brow
         outline.append(H(R * 0.90, R * 0.34))                               // stop (brow → muzzle)

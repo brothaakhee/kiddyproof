@@ -276,8 +276,11 @@ final class KiddyCat {
                 let n = tail.count
                 for i in 1..<n {
                     let t = CGFloat(i) / CGFloat(n - 1)
-                    let tx = pos.x + facing * size * (-0.58 - 0.34 * sin(.pi * t) + 0.30 * t * t)
-                    let ty = groundY + size * (0.86 + 1.28 * t)
+                    // Traced-stand tail centerline: base behind the rump, mid
+                    // bowing further back, tip hooking forward — a soft S whose
+                    // arc length matches the chain, so no slack juts straight up.
+                    let tx = pos.x - facing * size * (0.60 + 0.42 * sin(.pi * min(t * 1.3, 1)))
+                    let ty = groundY + size * (0.88 + 1.02 * t)
                     let k = settle * min(1, dt * 9)
                     let dx = (tx - tail[i].x) * k, dy = (ty - tail[i].y) * k
                     tail[i].x += dx; tail[i].y += dy

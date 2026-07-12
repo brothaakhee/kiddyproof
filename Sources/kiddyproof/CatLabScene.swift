@@ -101,7 +101,9 @@ final class CatLabScene: Scene {
                 let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot]
                 let pick = choices[rng.int(choices.count)]
                 if pick == .walk || pick == .trot { cat.face(rng.unit() > 0.5 ? 1 : -1) }
-                cat.set(state: pick)
+                // Re-picking the current state must not reset its settle clock —
+                // the traced resting poses need uninterrupted stateTime to engage.
+                if pick != cat.state { cat.set(state: pick) }
                 nextIdleChange = now + Double(rng.range(2.2, 5.5))
             }
         case .stalk:

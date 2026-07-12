@@ -233,7 +233,7 @@ final class KiddyCat {
         case .stalk, .pounceWindup: return (-0.25, 2.6)   // low, twitchy
         case .walk, .trot: return (0.74, 0.9)             // raised, soft S
         case .startle: return (1.1, 0)                    // bottle-brush up
-        case .pounceAir: return (0.2, 0)                  // streams back in flight
+        case .pounceAir: return (1.0, 0)                  // carried up-back in flight
         case .sit, .groom, .lie: return (0.22, 0.35)      // wrapped low, tip curled
         default: return (0.55, 0.6)
         }
@@ -366,10 +366,13 @@ final class KiddyCat {
             p.headForward = 1.15
             p.earPerk = 1
         case .pounceAir:
+            // Gentle rising bound: slight diagonal, head forward with the arc.
             p.bodyStretch = 0.45
             p.backArch = -0.05
-            p.headForward = 1.3
-            p.headHeight = 1.1
+            p.shoulderHeight = 1.06
+            p.rumpHeight = 0.84
+            p.headForward = 1.30
+            p.headHeight = 1.18
             p.frontLegBend = -0.5      // reaching
             p.rearLegBend = -0.6
         case .land:
@@ -588,9 +591,9 @@ final class KiddyCat {
                     footY = 0
                 }
                 if state == .pounceAir {
-                    // Airborne: paws gathered near the body, reaching with the arc.
-                    footX = rootX + (front ? 0.52 : -0.42)
-                    footY = front ? 0.58 : 0.26
+                    // Airborne: forepaws reach with the arc, rear legs trail.
+                    footX = rootX + (front ? 0.55 : -0.45)
+                    footY = front ? 0.62 : 0.20
                 }
             }
             let color = far ? farColor : bodyColor

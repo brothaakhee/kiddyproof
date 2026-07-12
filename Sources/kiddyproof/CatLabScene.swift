@@ -72,6 +72,9 @@ final class CatLabScene: Scene {
             cat.interest = laser
             keepOnScreen(cat, ctx)
             cat.update(dt: ctx.dt, now: now)
+            // Display stand for the flight pose: hold her mid-air so the
+            // leap can be seen (live pounces arc through this in 0.4s).
+            if pin == .pounceAir { cat.pos.y = cat.groundY + cat.size * 1.1 }
             return
         }
 

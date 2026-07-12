@@ -19,7 +19,7 @@ final class KiddyCat {
     var style: Style = .silhouette
 
     enum State: String {
-        case idle, sit, groom, stretch, walk, trot, stalk, pounceWindup, pounceAir, land, startle
+        case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle
     }
 
     // MARK: Public surface
@@ -81,13 +81,21 @@ final class KiddyCat {
 
     func face(_ dir: CGFloat) { facing = dir >= 0 ? 1 : -1 }
 
-    // Launch at a world point (harness decides when).
+    // True while feet are on the ground and no launch is in progress.
+    private var grounded: Bool {
+        pos.y <= groundY + 1 && state != .pounceAir && state != .startle
+    }
+
+    // Launch at a world point (harness decides when). Ignored while airborne —
+    // re-launching mid-flight compounds velocity and sends the cat flying.
     func pounce(at target: NSPoint) {
+        guard grounded else { return }
         pounceTarget = target
         set(state: .pounceWindup)
     }
 
     func startle() {
+        guard grounded else { return }
         set(state: .startle)
         vy = size * 7.5
     }
@@ -226,7 +234,7 @@ final class KiddyCat {
         case .walk, .trot: return (0.75, 1.0)             // raised, confident
         case .startle: return (1.1, 0)                    // bottle-brush up
         case .pounceAir: return (0.2, 0)                  // streams back in flight
-        case .sit, .groom: return (0.1, 0.4)              // wrapped low
+        case .sit, .groom, .lie: return (0.05, 0.35)      // wrapped low
         default: return (0.55, 0.6)
         }
     }
@@ -249,7 +257,7 @@ final class KiddyCat {
             vel.y += (lift * t * size * 5.2 - size * 2.2) * dt * dt * 60
             vel.x += CGFloat(sin(now * (1.3 + Double(sway)) + Double(t) * 2.6)) * sway * t * size * 0.5 * dt
             // Sitting: the tail curls forward and wraps around the paws.
-            if state == .sit || state == .groom {
+            if state == .sit || state == .groom || state == .lie {
                 vel.x += facing * t * t * size * 2.6 * dt * dt * 60
             }
             tailPrev[i] = cur
@@ -319,6 +327,14 @@ final class KiddyCat {
         case .trot:
             p.backArch = 0.05
             p.shoulderHeight = 0.86
+        case .lie:
+            // The loaf: a smooth low mound, head up, everything tucked.
+            p.shoulderHeight = 0.58
+            p.rumpHeight = 0.60
+            p.headHeight = 0.98
+            p.headForward = 0.55
+            p.crouch = 0.55
+            p.earPerk = 0.55
         case .stalk:
             p.crouch = 0.55
             p.headHeight = 0.72
@@ -529,6 +545,16 @@ final class KiddyCat {
             let rootY = front ? shoulderY - 0.05 : rumpY - 0.02
             var footX = rootX
             var footY: CGFloat = 0
+            if state == .lie {
+                if !front { return }                       // rear legs fully tucked
+                // Folded forepaw peeking out under the chest.
+                let pw = s * 0.115
+                let pp = P(rootX + 0.30, 0.06)
+                ctx.setFillColor((far ? farColor : bodyColor).cgColor)
+                ctx.fillEllipse(in: CGRect(x: pp.x - pw * 1.3, y: pp.y - pw * 0.7,
+                                           width: pw * 2.6, height: pw * 1.4))
+                return
+            }
             if sit > 0.5 && !front {
                 footX = rootX + 0.36; footY = 0
             } else if sit > 0.5 && front {
@@ -598,7 +624,7 @@ final class KiddyCat {
         // --- Body + head: ONE closed smooth outline. The head section is a real
         // cat profile (crown → brow → nose STEP → chin → jaw), not a circle —
         // the muzzle step is what the reference silhouettes live on.
-        let hp = headPitch
+        let hp = headPitch * (state == .lie ? 0.5 : 1)
         let R: CGFloat = 0.36
         let hcx = headX - 0.09, hcy = headY - 0.13 + hp * 0.22
         // Head-relative point, gently rotated by head pitch.
@@ -669,13 +695,13 @@ final class KiddyCat {
         // Haunch: a sweeping thigh arc from the tail root around and down.
         let haunch = CGMutablePath()
         haunch.move(to: P(rumpX + 0.04 + sit * 0.04, rumpY + 0.02 + sit * 0.08))
-        haunch.addQuadCurve(to: P(rumpX + 0.22 + sit * 0.12, rumpY - 0.50 + sit * 0.18),
+        haunch.addQuadCurve(to: P(rumpX + 0.22 + sit * 0.12, rumpY - 0.50 + sit * 0.18 + pose.crouch * 0.16),
                             control: P(rumpX + 0.40 + sit * 0.06, rumpY - 0.16))
         ctx.addPath(haunch)
         ctx.strokePath()
         // Foreleg: a short line separating the near front leg from the chest.
         // Static poses only — a swinging leg leaves the line floating.
-        if state != .pounceAir, abs(speed) < size * 0.3 {
+        if state != .pounceAir, state != .lie, abs(speed) < size * 0.3 {
             let leg = CGMutablePath()
             leg.move(to: P(shoulderX - 0.10 + sit * 0.06, bellyY - 0.01))
             leg.addQuadCurve(to: P(shoulderX - 0.12 + sit * 0.10, 0.12),

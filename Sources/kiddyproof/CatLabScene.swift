@@ -24,6 +24,7 @@ final class CatLabScene: Scene {
     private var bgFallback: CGFloat = 0.3
     private var now: TimeInterval = 0
     private var laser = NSPoint.zero
+    private var lastBounds = CGRect.zero
 
     func reset() {
         cat = nil
@@ -40,7 +41,8 @@ final class CatLabScene: Scene {
             cat.startle()
             ctx.audio?.bonk(intensity: 0.3)
         case .click(let pt, .left):
-            cat.pounce(at: NSPoint(x: pt.x, y: cat.groundY))
+            let x = max(lastBounds.minX + cat.size * 2, min(lastBounds.maxX - cat.size * 2, pt.x))
+            cat.pounce(at: NSPoint(x: x, y: cat.groundY))
         default:
             break
         }
@@ -50,6 +52,7 @@ final class CatLabScene: Scene {
         now = ctx.now
         bgMap = ctx.background; bgFallback = ctx.fallbackLightness
         laser = ctx.cursor
+        lastBounds = ctx.bounds
 
         if cat == nil {
             let ground = ctx.bounds.minY + 140
@@ -81,7 +84,7 @@ final class CatLabScene: Scene {
         let laserNear = laserDist < ctx.bounds.width * 0.4 && laser.y < cat.groundY + 320
 
         switch cat.state {
-        case .idle, .sit, .groom, .stretch, .walk, .trot:
+        case .idle, .sit, .groom, .stretch, .lie, .walk, .trot:
             cat.interest = laserNear ? laser : nil
             if laserNear, laserMoved > 6 {
                 // A moving dot is irresistible.
@@ -89,7 +92,7 @@ final class CatLabScene: Scene {
                 cat.set(state: laserDist > 420 ? .trot : .stalk)
             } else if now >= nextIdleChange {
                 // Autonomous life: amble, rest, groom, stretch.
-                let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .walk, .trot]
+                let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot]
                 let pick = choices[rng.int(choices.count)]
                 if pick == .walk || pick == .trot { cat.face(rng.unit() > 0.5 ? 1 : -1) }
                 cat.set(state: pick)
@@ -101,7 +104,8 @@ final class CatLabScene: Scene {
             if !laserNear {
                 cat.set(state: .idle)
             } else if laserDist < 190, laserStill > 0.25 {
-                cat.pounce(at: NSPoint(x: laser.x, y: cat.groundY))
+                let x = max(ctx.bounds.minX + cat.size * 2, min(ctx.bounds.maxX - cat.size * 2, laser.x))
+                cat.pounce(at: NSPoint(x: x, y: cat.groundY))
             } else if laserDist > 500 {
                 cat.set(state: .trot)
             }
@@ -117,6 +121,8 @@ final class CatLabScene: Scene {
         let margin = cat.size * 2.4
         if cat.pos.x < ctx.bounds.minX + margin { cat.face(1) }
         if cat.pos.x > ctx.bounds.maxX - margin { cat.face(-1) }
+        // Hard clamp: a pounce ballistic must never carry her off-screen.
+        cat.pos.x = max(ctx.bounds.minX + cat.size, min(ctx.bounds.maxX - cat.size, cat.pos.x))
     }
 
     func liveCount() -> Int { cat == nil ? 0 : 1 }

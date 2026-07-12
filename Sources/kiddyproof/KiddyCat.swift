@@ -640,16 +640,27 @@ final class KiddyCat {
             ctx.fillPath()
         }
 
-        // --- Body: one closed smooth outline ending in a thick neck. The head is
-        // a separate FRONT-FACING group (the reference cats walk in profile but
-        // turn the face to the viewer — big round skull, symmetric ears, both
-        // eyes). Flat color makes the union seamless.
+        // --- Body + head. Like the reference sheet: resting cats (sit, stand,
+        // loaf) turn a FRONT-FACING head to the viewer; action cats (stalk,
+        // leap, stretch) keep a PROFILE head. Flat color unions seamlessly.
+        let profileHead = state == .stalk || state == .pounceWindup || state == .pounceAir
+            || state == .land || state == .stretch || state == .groom
         let hp = headPitch * (state == .lie ? 0.5 : 1)
-        let hcx = headX - 0.22, hcy = headY - 0.08 + hp * 0.14
+        let hcx = profileHead ? headX - 0.06 : headX - 0.22
+        let hcy = (profileHead ? headY - 0.10 : headY - 0.08) + hp * 0.14
+        let R: CGFloat = 0.33
+        let ca = cos(hp * 0.5), sa = sin(hp * 0.5)
+        func H(_ dx: CGFloat, _ dy: CGFloat) -> (CGFloat, CGFloat) {
+            (hcx + dx * ca - dy * sa, hcy + dx * sa + dy * ca)
+        }
         let spineTopY = (shoulderY + rumpY) / 2 + 0.17 + pose.backArch
         let bellyY = shoulderY - 0.47 + pose.crouch * 0.22
         var outline: [(CGFloat, CGFloat)] = []
-        outline.append((hcx + 0.28, hcy - 0.30))                            // under head, front
+        if profileHead {
+            outline.append(H(R * 0.15, -R * 0.94))                          // under jaw
+        } else {
+            outline.append((hcx + 0.28, hcy - 0.30))                        // under head, front
+        }
         outline.append((shoulderX + 0.18 + sit * 0.11, shoulderY - 0.40 - sit * 0.02)) // chest
         outline.append(((shoulderX + rumpX) / 2 + 0.06, bellyY))            // belly
         outline.append((rumpX + 0.30, rumpY - 0.38 - sit * 0.10))           // groin / thigh front
@@ -658,45 +669,75 @@ final class KiddyCat {
         outline.append((rumpX - 0.12, rumpY + 0.21 + pose.backArch * 0.5))  // rump top
         outline.append(((rumpX + shoulderX) / 2, spineTopY))                // spine crest
         outline.append((shoulderX - 0.02 - sit * 0.10, shoulderY + 0.19 + sit * 0.06 + pose.backArch * 0.3)) // withers
-        outline.append((hcx - 0.28, hcy - 0.26))                            // under head, back
+        if profileHead {
+            // Profile head riding the outline: crown → brow → nose STEP → chin.
+            outline.append((shoulderX + 0.20 - sit * 0.08, shoulderY + 0.08 + sit * 0.26)) // neck top
+            outline.append(H(-R * 0.66, R * 0.55))                          // crown back
+            outline.append(H(-R * 0.12, R * 0.98))                          // crown top
+            outline.append(H(R * 0.55, R * 0.82))                           // brow
+            outline.append(H(R * 0.90, R * 0.34))                           // stop
+            outline.append(H(R * 1.12, R * 0.02))                           // nose tip
+            outline.append(H(R * 1.05, -R * 0.26))                          // under nose
+            outline.append(H(R * 0.72, -R * 0.56))                          // chin
+            outline.append(H(R * 0.30, -R * 0.84))                          // jaw
+        } else {
+            outline.append((hcx - 0.28, hcy - 0.26))                        // under head, back
+        }
         ctx.setFillColor(bodyColor.cgColor)
         ctx.addPath(Self.catmull(mapped(outline), closed: true))
         ctx.fillPath()
 
-        // Thick neck joining shoulders to skull (fully covered by both).
-        ctx.setStrokeColor(bodyColor.cgColor)
-        ctx.setLineCap(.round)
-        ctx.setLineWidth(s * 0.62)
-        ctx.beginPath()
-        ctx.move(to: P(shoulderX - 0.02, shoulderY - 0.10))
-        ctx.addLine(to: P(hcx, hcy - 0.12))
-        ctx.strokePath()
-
-        // Head group: wide round skull with soft cheeks.
         let flick = earFlick * 0.06
-        let hw: CGFloat = 0.41, hh: CGFloat = 0.36   // skull radii
-        let headC = P(hcx, hcy)
-        // Ears first (bases swallowed by the skull): symmetric, canted outward.
-        func frontEar(_ side: CGFloat, cant: CGFloat) {
-            let e = CGMutablePath()
-            let baseIn  = (hcx + side * hw * 0.16, hcy + hh * 0.80)
-            let baseOut = (hcx + side * hw * 0.94, hcy + hh * 0.28)
-            let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.34 + pose.earPerk * 0.20))
-            e.move(to: P(baseIn.0, baseIn.1))
-            e.addLine(to: P(tip.0, tip.1))
-            // Convex outer edge.
-            e.addQuadCurve(to: P(baseOut.0, baseOut.1),
-                           control: P(hcx + side * hw * 1.16, hcy + hh * 0.96))
-            e.closeSubpath()
-            ctx.addPath(e)
-            ctx.fillPath()
+        let hw: CGFloat = 0.41, hh: CGFloat = 0.36   // front-face skull radii
+        if profileHead {
+            // Profile ears: a tight pair on the crown, rotating with pitch.
+            let earLen = R * (0.60 + 0.36 * pose.earPerk)
+            func profEar(baseA: CGFloat, tipA: CGFloat, tipLen: CGFloat) {
+                let e = CGMutablePath()
+                let a1 = baseA - 0.36, a2 = baseA + 0.36
+                e.move(to: P(hcx + cos(a1) * R * 0.90, hcy + sin(a1) * R * 0.90))
+                let tip = (x: hcx + cos(tipA) * (R * 0.72 + tipLen), y: hcy + sin(tipA) * (R * 0.72 + tipLen))
+                e.addQuadCurve(to: P(tip.x, tip.y),
+                               control: P(hcx + cos(a1 + 0.14) * (R + tipLen * 0.75), hcy + sin(a1 + 0.14) * (R + tipLen * 0.75)))
+                e.addLine(to: P(hcx + cos(a2) * R * 0.90, hcy + sin(a2) * R * 0.90))
+                e.closeSubpath()
+                ctx.addPath(e)
+                ctx.fillPath()
+            }
+            ctx.setFillColor(bodyColor.cgColor)
+            profEar(baseA: 1.70 + hp * 0.5, tipA: 1.78 + hp * 0.5 + flick * 1.6, tipLen: earLen * 0.88)
+            profEar(baseA: 1.26 + hp * 0.5, tipA: 1.14 + hp * 0.5, tipLen: earLen)
+        } else {
+            // Thick neck joining shoulders to skull (fully covered by both).
+            ctx.setStrokeColor(bodyColor.cgColor)
+            ctx.setLineCap(.round)
+            ctx.setLineWidth(s * 0.62)
+            ctx.beginPath()
+            ctx.move(to: P(shoulderX - 0.02, shoulderY - 0.10))
+            ctx.addLine(to: P(hcx, hcy - 0.12))
+            ctx.strokePath()
+            // Symmetric front ears, bases swallowed by the skull.
+            func frontEar(_ side: CGFloat, cant: CGFloat) {
+                let e = CGMutablePath()
+                let baseIn  = (hcx + side * hw * 0.16, hcy + hh * 0.80)
+                let baseOut = (hcx + side * hw * 0.94, hcy + hh * 0.28)
+                let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.34 + pose.earPerk * 0.20))
+                e.move(to: P(baseIn.0, baseIn.1))
+                e.addLine(to: P(tip.0, tip.1))
+                e.addQuadCurve(to: P(baseOut.0, baseOut.1),
+                               control: P(hcx + side * hw * 1.16, hcy + hh * 0.96))
+                e.closeSubpath()
+                ctx.addPath(e)
+                ctx.fillPath()
+            }
+            ctx.setFillColor(bodyColor.cgColor)
+            frontEar(1, cant: flick)          // near-side ear (flicks)
+            frontEar(-1, cant: 0)             // far-side ear
+            // Skull: slightly wider than tall, cheeks full.
+            let headC = P(hcx, hcy)
+            ctx.fillEllipse(in: CGRect(x: headC.x - hw * s, y: headC.y - hh * s,
+                                       width: hw * 2 * s, height: hh * 2 * s))
         }
-        ctx.setFillColor(bodyColor.cgColor)
-        frontEar(1, cant: flick)          // near-side ear (flicks)
-        frontEar(-1, cant: 0)             // far-side ear
-        // Skull: slightly wider than tall, cheeks full.
-        ctx.fillEllipse(in: CGRect(x: headC.x - hw * s, y: headC.y - hh * s,
-                                   width: hw * 2 * s, height: hh * 2 * s))
 
         // Sitting: haunch mass over the folded rear, blended into the outline.
         if sit > 0.15 {
@@ -724,7 +765,7 @@ final class KiddyCat {
         ctx.strokePath()
         // Foreleg: a short line separating the near front leg from the chest.
         // Static poses only — a swinging leg leaves the line floating.
-        if state != .pounceAir, state != .lie, abs(speed) < size * 0.3 {
+        if state != .pounceAir, state != .lie, pose.frontLegBend <= 0, abs(speed) < size * 0.3 {
             let leg = CGMutablePath()
             leg.move(to: P(shoulderX - 0.10 + sit * 0.06, bellyY - 0.01))
             leg.addQuadCurve(to: P(shoulderX - 0.12 + sit * 0.10, 0.12),
@@ -733,66 +774,91 @@ final class KiddyCat {
             ctx.strokePath()
         }
 
-        // --- Face (front-facing, per the reference): two eyes, nose, mouth,
-        // whiskers both sides. Features shift a touch with head pitch.
-        let fy = hp * 0.05
-        // Whiskers.
-        ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
-        ctx.setLineWidth(s * 0.017)
-        for side: CGFloat in [-1, 1] {
-            for (dy, len) in [(CGFloat(0.02), CGFloat(0.26)), (CGFloat(-0.05), CGFloat(0.30)), (CGFloat(-0.12), CGFloat(0.25))] {
+        // --- Face. Profile: side eye + forward whiskers (action cats in the
+        // reference). Front: two eyes, nose, ω mouth, whiskers both sides.
+        let eyeOpen = 1 - blinkPhase
+        if profileHead {
+            // Whiskers fanning forward from the muzzle.
+            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(s * 0.017)
+            for (dy, len, tilt) in [(CGFloat(-0.06), CGFloat(0.30), CGFloat(0.08)),
+                                    (CGFloat(-0.12), CGFloat(0.33), CGFloat(0.00)),
+                                    (CGFloat(-0.18), CGFloat(0.28), CGFloat(-0.08))] {
+                let base = H(R * 0.88, R * (dy * 2 - 0.18))
+                let tip  = (base.0 + len * ca - tilt * sa, base.1 + len * sa + tilt * ca)
                 ctx.beginPath()
-                ctx.move(to: P(hcx + side * hw * 0.55, hcy + fy - 0.10 + dy * 0.5))
-                ctx.addLine(to: P(hcx + side * (hw * 0.55 + len), hcy + fy - 0.10 + dy))
+                ctx.move(to: P(base.0, base.1))
+                ctx.addLine(to: P(tip.0, tip.1 + dy))
                 ctx.strokePath()
             }
-        }
-        // Inner-ear lines.
-        for side: CGFloat in [-1, 1] {
-            ctx.beginPath()
-            ctx.move(to: P(hcx + side * hw * 0.44, hcy + hh * 0.68))
-            ctx.addLine(to: P(hcx + side * hw * 0.70, hcy + hh * 1.08))
-            ctx.strokePath()
-        }
-        // Eyes (blink scales height): light almonds with body-colored slits.
-        let eyeOpen = 1 - blinkPhase
-        if eyeOpen > 0.08 {
-            let ew = s * 0.062, eh = s * 0.078 * eyeOpen
-            for side: CGFloat in [-1, 1] {
-                let e = P(hcx + side * hw * 0.40, hcy + fy + hh * 0.10)
+            // Lidded side eye.
+            if eyeOpen > 0.08 {
+                let e = P(hcx + R * 0.42, hcy + R * 0.22 + hp * 0.03)
+                let ew = s * 0.055, eh = s * 0.070 * eyeOpen
                 ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
                 ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
                 ctx.setFillColor(bodyColor.cgColor)
-                ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.30, y: e.y - eh * 0.48, width: ew * 0.60, height: eh * 0.96))
-                // Upper lid: flatten the eye top for the reference's calm gaze.
-                ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.58, width: ew * 2.2, height: eh * 1.2))
+                ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.28, y: e.y - eh * 0.45, width: ew * 0.56, height: eh * 0.90))
+                ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.55, width: ew * 2.2, height: eh * 1.1))
             }
+        } else {
+            let fy = hp * 0.05
+            // Whiskers.
+            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(s * 0.017)
+            for side: CGFloat in [-1, 1] {
+                for (dy, len) in [(CGFloat(0.02), CGFloat(0.26)), (CGFloat(-0.05), CGFloat(0.30)), (CGFloat(-0.12), CGFloat(0.25))] {
+                    ctx.beginPath()
+                    ctx.move(to: P(hcx + side * hw * 0.55, hcy + fy - 0.10 + dy * 0.5))
+                    ctx.addLine(to: P(hcx + side * (hw * 0.55 + len), hcy + fy - 0.10 + dy))
+                    ctx.strokePath()
+                }
+            }
+            // Inner-ear lines.
+            for side: CGFloat in [-1, 1] {
+                ctx.beginPath()
+                ctx.move(to: P(hcx + side * hw * 0.44, hcy + hh * 0.68))
+                ctx.addLine(to: P(hcx + side * hw * 0.70, hcy + hh * 1.08))
+                ctx.strokePath()
+            }
+            // Eyes (blink scales height): light almonds, round pupils, calm lids.
+            if eyeOpen > 0.08 {
+                let ew = s * 0.062, eh = s * 0.078 * eyeOpen
+                for side: CGFloat in [-1, 1] {
+                    let e = P(hcx + side * hw * 0.40, hcy + fy + hh * 0.10)
+                    ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
+                    ctx.setFillColor(bodyColor.cgColor)
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.30, y: e.y - eh * 0.48, width: ew * 0.60, height: eh * 0.96))
+                    ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.58, width: ew * 2.2, height: eh * 1.2))
+                }
+            }
+            // Nose: a tiny light triangle, point down.
+            ctx.setFillColor(accent.withAlphaComponent(0.9).cgColor)
+            let np = P(hcx, hcy + fy - hh * 0.34)
+            let nw = s * 0.045
+            let nose = CGMutablePath()
+            nose.move(to: CGPoint(x: np.x - nw, y: np.y + nw * 0.7))
+            nose.addLine(to: CGPoint(x: np.x + nw, y: np.y + nw * 0.7))
+            nose.addLine(to: CGPoint(x: np.x, y: np.y - nw * 0.8))
+            nose.closeSubpath()
+            ctx.addPath(nose)
+            ctx.fillPath()
+            // Mouth: the little ω under the nose.
+            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
+            ctx.setLineWidth(s * 0.016)
+            let mc = P(hcx, hcy + fy - hh * 0.52)
+            ctx.beginPath()
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.05))
+            ctx.addLine(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.addQuadCurve(to: CGPoint(x: mc.x - s * 0.075, y: mc.y + s * 0.035),
+                             control: CGPoint(x: mc.x - s * 0.045, y: mc.y - s * 0.02))
+            ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
+            ctx.addQuadCurve(to: CGPoint(x: mc.x + s * 0.075, y: mc.y + s * 0.035),
+                             control: CGPoint(x: mc.x + s * 0.045, y: mc.y - s * 0.02))
+            ctx.strokePath()
         }
-        // Nose: a tiny light triangle, point down.
-        ctx.setFillColor(accent.withAlphaComponent(0.9).cgColor)
-        let np = P(hcx, hcy + fy - hh * 0.34)
-        let nw = s * 0.045
-        let nose = CGMutablePath()
-        nose.move(to: CGPoint(x: np.x - nw, y: np.y + nw * 0.7))
-        nose.addLine(to: CGPoint(x: np.x + nw, y: np.y + nw * 0.7))
-        nose.addLine(to: CGPoint(x: np.x, y: np.y - nw * 0.8))
-        nose.closeSubpath()
-        ctx.addPath(nose)
-        ctx.fillPath()
-        // Mouth: the little ω under the nose.
-        ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
-        ctx.setLineWidth(s * 0.016)
-        let mc = P(hcx, hcy + fy - hh * 0.52)
-        ctx.beginPath()
-        ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.05))
-        ctx.addLine(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-        ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-        ctx.addQuadCurve(to: CGPoint(x: mc.x - s * 0.075, y: mc.y + s * 0.035),
-                         control: CGPoint(x: mc.x - s * 0.045, y: mc.y - s * 0.02))
-        ctx.move(to: CGPoint(x: mc.x, y: mc.y + s * 0.015))
-        ctx.addQuadCurve(to: CGPoint(x: mc.x + s * 0.075, y: mc.y + s * 0.035),
-                         control: CGPoint(x: mc.x + s * 0.045, y: mc.y - s * 0.02))
-        ctx.strokePath()
         ctx.setAlpha(1)
     }
 

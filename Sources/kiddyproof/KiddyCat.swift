@@ -271,7 +271,7 @@ final class KiddyCat {
         // (bows back mid-length, tip hooks forward). Weak pull — the verlet
         // sway stays audible on top.
         if state == .idle || state == .walk || state == .trot {
-            let settle = CGFloat(min(1, max(0, stateTime - 0.3) * 0.8))
+            let settle = CGFloat(min(1, max(0, stateTime - 0.1) * 1.6))
             if settle > 0 {
                 let n = tail.count
                 for i in 1..<n {
@@ -654,7 +654,12 @@ final class KiddyCat {
 
         // --- TRACED reference silhouettes for settled static poses: the resting
         // cat IS the sheet's outline (digitized), while the rig owns all motion.
-        let tracedPose: ([(CGFloat, CGFloat)], CGFloat, (CGFloat, CGFloat, CGFloat), [[(CGFloat, CGFloat)]])? = {
+        let tracedPose: ([(CGFloat, CGFloat)], CGFloat, (CGFloat, CGFloat, CGFloat)?, [[(CGFloat, CGFloat)]])? = {
+            // Ballistic flight: legs are frozen mid-reach, so the traced leap
+            // silhouette is correct the moment the windup blend completes.
+            if state == .pounceAir, blend >= 0.6 {
+                return (KiddyCatTraced.leap, KiddyCatTraced.leapScale, nil, [])
+            }
             guard blend >= 1, abs(speed) < 1, stateTime > 0.9 else { return nil }
             switch state {
             case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents)
@@ -676,8 +681,10 @@ final class KiddyCat {
                 ctx.addPath(Self.catmull(stroke.map { P(-$0.0 * tscale, $0.1 * tscale) }, closed: false))
                 ctx.strokePath()
             }
-            frontFace(-tface.0 * tscale, tface.1 * tscale, tface.2 * tscale, tface.2 * tscale * 0.88,
-                      sleepy: state == .lie)
+            if let tface = tface {
+                frontFace(-tface.0 * tscale, tface.1 * tscale, tface.2 * tscale, tface.2 * tscale * 0.88,
+                          sleepy: state == .lie)
+            }
             ctx.setAlpha(1)
             return
         }

@@ -224,9 +224,10 @@ final class KiddyCat {
         switch state {
         case .stalk, .pounceWindup: return (-0.25, 2.6)   // low, twitchy
         case .walk, .trot: return (0.75, 1.0)             // raised, confident
-        case .startle, .pounceAir: return (1.1, 0)        // bottle-brush up
+        case .startle: return (1.1, 0)                    // bottle-brush up
+        case .pounceAir: return (0.2, 0)                  // streams back in flight
         case .sit, .groom: return (0.1, 0.4)              // wrapped low
-        default: return (0.4, 0.6)
+        default: return (0.55, 0.6)
         }
     }
 
@@ -234,9 +235,9 @@ final class KiddyCat {
         let pose = currentPose()
         let rootBack: CGFloat = style == .arcade
             ? (state == .sit || state == .groom ? 0.42 : 0.52)
-            : (state == .sit || state == .groom ? 0.62 : 0.92)
+            : (state == .sit || state == .groom ? 0.58 : 0.72)
         let root = NSPoint(x: pos.x - facing * size * rootBack,
-                           y: pos.y + size * pose.rumpHeight * (style == .arcade ? 0.72 : 1))
+                           y: pos.y + size * pose.rumpHeight * (style == .arcade ? 0.72 : 0.88))
         let seg = size * 0.15
         let (lift, sway) = tailMood()
         // Verlet integrate.
@@ -438,6 +439,54 @@ final class KiddyCat {
         ctx.restoreGState()
     }
 
+    // MARK: Silhouette spline helpers
+
+    // Smooth curve through points (Catmull-Rom converted to cubic Béziers) —
+    // professional silhouettes are continuous curvature, not welded primitives.
+    private static func catmull(_ pts: [CGPoint], closed: Bool) -> CGMutablePath {
+        let path = CGMutablePath()
+        let n = pts.count
+        guard n >= 3 else { return path }
+        path.move(to: pts[0])
+        let segs = closed ? n : n - 1
+        for i in 0..<segs {
+            let p0 = pts[closed ? (i - 1 + n) % n : max(0, i - 1)]
+            let p1 = pts[i]
+            let p2 = pts[(i + 1) % n]
+            let p3 = pts[closed ? (i + 2) % n : min(n - 1, i + 2)]
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            path.addCurve(to: p2, control1: c1, control2: c2)
+        }
+        if closed { path.closeSubpath() }
+        return path
+    }
+
+    // A filled tapered tube along a centerline: per-point widths, smooth sides,
+    // rounded tip. Replaces stroked segments (which bulge at width steps).
+    private static func ribbon(_ center: [CGPoint], _ widths: [CGFloat]) -> CGMutablePath {
+        let n = center.count
+        guard n >= 2 else { return CGMutablePath() }
+        var left = [CGPoint](); var right = [CGPoint]()
+        left.reserveCapacity(n); right.reserveCapacity(n)
+        for i in 0..<n {
+            let a = center[max(0, i - 1)], b = center[min(n - 1, i + 1)]
+            var tx = b.x - a.x, ty = b.y - a.y
+            let len = max(0.0001, sqrt(tx * tx + ty * ty))
+            tx /= len; ty /= len
+            let hw = widths[i] / 2
+            left.append(CGPoint(x: center[i].x - ty * hw, y: center[i].y + tx * hw))
+            right.append(CGPoint(x: center[i].x + ty * hw, y: center[i].y - tx * hw))
+        }
+        // Rounded tip: extend past the last point along the tangent.
+        let a = center[n - 2], b = center[n - 1]
+        var tx = b.x - a.x, ty = b.y - a.y
+        let len = max(0.0001, sqrt(tx * tx + ty * ty))
+        tx /= len; ty /= len
+        let tip = CGPoint(x: b.x + tx * widths[n - 1] * 0.55, y: b.y + ty * widths[n - 1] * 0.55)
+        return catmull(left + [tip] + right.reversed(), closed: true)
+    }
+
     private func drawSilhouette(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
         let pose = currentPose()
         let s = size
@@ -452,6 +501,7 @@ final class KiddyCat {
         @inline(__always) func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
             CGPoint(x: gx + x * f * s, y: gy + y * s)
         }
+        func mapped(_ pts: [(CGFloat, CGFloat)]) -> [CGPoint] { pts.map { P($0.0, $0.1) } }
 
         // Anchor geometry.
         let stretch = pose.bodyStretch
@@ -462,118 +512,128 @@ final class KiddyCat {
         let headX = pose.headForward + stretch * 0.2
         let headY = pose.headHeight
         let stride = strideLength()
+        let sit = pose.sitFold
 
-        ctx.setLineCap(.round)
-        ctx.setLineJoin(.round)
         ctx.setAlpha(1)
         ctx.setBlendMode(.normal)
 
-        // --- Legs (far pair first, faded, phase-shifted) ---
+        // --- Legs: filled tapered limbs with real anatomy — wide thigh/shoulder,
+        // a hock (reverse heel) on the rear leg, slim pastern, rounded paw.
         func drawLeg(front: Bool, far: Bool) {
             let legIdx = (front ? 0 : 2) + (far ? 1 : 0)
-            let rootX = front ? shoulderX - 0.06 : rumpX + 0.1
-            let rootY = front ? shoulderY - 0.12 : rumpY - 0.1
+            let rootX = front ? shoulderX - 0.04 : rumpX + 0.12
+            let rootY = front ? shoulderY - 0.05 : rumpY - 0.02
             var footX = rootX
             var footY: CGFloat = 0
-            if pose.sitFold > 0.5 && !front {
-                // Folded haunch: foot tucks forward under the body.
-                footX = rootX + 0.34
-                footY = 0
+            if sit > 0.5 && !front {
+                footX = rootX + 0.36; footY = 0
+            } else if sit > 0.5 && front {
+                footX = rootX + sit * 0.12; footY = 0
             } else {
                 let (dx, lift) = footOffset(legIdx, stride: stride / s)
                 footX = rootX + dx
                 footY = lift / s
+                if front, pose.frontLegBend > 0 {
+                    // Play-bow: forepaws reach far forward along the ground.
+                    footX = rootX + pose.frontLegBend * 0.5
+                    footY = 0
+                }
                 if state == .pounceAir {
-                    footX = rootX + (front ? 0.35 : -0.3)
-                    footY = 0.28
+                    // Airborne: paws gathered near the body, reaching with the arc.
+                    footX = rootX + (front ? 0.52 : -0.42)
+                    footY = front ? 0.58 : 0.26
                 }
             }
-            // Two-segment limb via a quad control point: front knees bend backward,
-            // rear hocks bend forward (side-view cat anatomy).
-            let midX = (rootX + footX) / 2 + (front ? -0.1 : 0.14) * (1 - pose.sitFold)
-            let midY = (rootY + footY) / 2 + 0.02
-            let path = CGMutablePath()
-            path.move(to: P(rootX, rootY))
-            path.addQuadCurve(to: P(footX, footY + 0.03), control: P(midX, midY))
-            ctx.setStrokeColor((far ? farColor : bodyColor).cgColor)
-            ctx.setLineWidth(s * (front ? 0.23 : 0.26))
+            let color = far ? farColor : bodyColor
+            ctx.setFillColor(color.cgColor)
+            let path: CGMutablePath
+            if front {
+                // Shoulder → elbow (slightly back) → wrist → paw.
+                let pts = mapped([
+                    (rootX, rootY),
+                    (rootX * 0.45 + footX * 0.55 - 0.015, (rootY + footY) / 2 + 0.05),
+                    (footX - 0.005, footY + 0.14),
+                    (footX, footY + 0.05),
+                ])
+                path = Self.ribbon(pts, [s * 0.26, s * 0.16, s * 0.115, s * 0.11])
+            } else {
+                // Hip → knee (forward) → hock (heel points BACK — the cat cue) → paw.
+                let fold = 1 - sit
+                let pts = mapped([
+                    (rootX, rootY + 0.06),
+                    (rootX * 0.4 + footX * 0.6 + 0.07 * fold, (rootY + footY) / 2 + 0.04),
+                    (footX - 0.07 * fold, footY + 0.17),
+                    (footX, footY + 0.05),
+                ])
+                path = Self.ribbon(pts, [s * 0.40, s * 0.24, s * 0.125, s * 0.115])
+            }
             ctx.addPath(path)
-            ctx.strokePath()
-            // Paw.
-            ctx.setFillColor((far ? farColor : bodyColor).cgColor)
-            let pw = s * 0.125
-            let pp = P(footX + 0.05, footY + 0.045)
-            ctx.fillEllipse(in: CGRect(x: pp.x - pw, y: pp.y - pw * 0.8, width: pw * 2, height: pw * 1.6))
+            ctx.fillPath()
+            // Paw: a soft rounded oval, slightly forward.
+            let pw = s * 0.115
+            let pp = P(footX + 0.055, footY + 0.045)
+            ctx.fillEllipse(in: CGRect(x: pp.x - pw, y: pp.y - pw * 0.72, width: pw * 2, height: pw * 1.44))
         }
         drawLeg(front: true, far: true)
         drawLeg(front: false, far: true)
 
-        // Rear haunch (thigh mass) behind the body fill so the back leg reads
-        // muscled — a cat's rear is its engine, not a wire.
+        // --- Tail: one smooth tapered ribbon over the verlet chain — plush base,
+        // soft tip, no segment bulges.
         do {
-            let hq = P(rumpX + 0.12, rumpY * 0.55)
-            let hw = s * 0.34, hh = s * 0.42 * (1 - pose.sitFold * 0.15)
-            ctx.setFillColor(farColor.cgColor)
-            ctx.fillEllipse(in: CGRect(x: hq.x - hw, y: hq.y - hh, width: hw * 2, height: hh * 2))
+            let pts = tail.map { CGPoint(x: $0.x - origin.x, y: $0.y - origin.y) }
+            let n = pts.count
+            let widths = (0..<n).map { i -> CGFloat in
+                let t = CGFloat(i) / CGFloat(n - 1)
+                return s * (0.22 - 0.10 * t)
+            }
+            ctx.setFillColor(bodyColor.cgColor)
+            ctx.addPath(Self.ribbon(pts, widths))
+            ctx.fillPath()
         }
 
-        // --- Tail (behind the body) ---
-        ctx.setStrokeColor(bodyColor.cgColor)
-        for i in 1..<tail.count {
-            let t = CGFloat(i) / CGFloat(tail.count - 1)
-            // A cat's tail is FAT — thick at the base, still plush at the tip
-            // (a thin taper reads instantly as a rat).
-            ctx.setLineWidth(s * (0.24 - 0.09 * t))
-            ctx.beginPath()
-            ctx.move(to: CGPoint(x: tail[i - 1].x - origin.x, y: tail[i - 1].y - origin.y))
-            ctx.addLine(to: CGPoint(x: tail[i].x - origin.x, y: tail[i].y - origin.y))
-            ctx.strokePath()
+        // --- Body + head: ONE closed smooth outline from chin around the whole
+        // animal — continuous curvature is what separates a logo-quality
+        // silhouette from welded primitives. The skull section rides on a circle
+        // of radius R so the head stays guaranteed-round.
+        let hp = headPitch
+        let R: CGFloat = 0.35
+        let hcx = headX + 0.02, hcy = headY + 0.02 + hp * 0.22
+        // Head-relative point, gently rotated by head pitch.
+        let ca = cos(hp * 0.5), sa = sin(hp * 0.5)
+        func H(_ dx: CGFloat, _ dy: CGFloat) -> (CGFloat, CGFloat) {
+            (hcx + dx * ca - dy * sa, hcy + dx * sa + dy * ca)
         }
-
-        // --- Body silhouette: ONE smooth flowing outline (reference silhouettes are
-        // a single unbroken curve — multi-segment waviness reads hand-drawn-badly).
-        let body = CGMutablePath()
-        let spineTopY = max(shoulderY, rumpY) + 0.14 + pose.backArch
-        body.move(to: P(rumpX - 0.14, rumpY - 0.3))                        // under the tail
-        body.addQuadCurve(to: P((rumpX + shoulderX) / 2, spineTopY),       // rump → spine crest
-                          control: P(rumpX - 0.16, rumpY + 0.22 + pose.backArch * 0.6))
-        body.addQuadCurve(to: P(shoulderX + 0.14, shoulderY - 0.02),       // crest → neck base
-                          control: P(shoulderX + 0.06, shoulderY + 0.16 + pose.backArch * 0.4))
-        // Throat → deep chest → belly → close.
-        body.addQuadCurve(to: P(shoulderX + 0.1, shoulderY - 0.42),
-                          control: P(shoulderX + 0.2, shoulderY - 0.22))
-        body.addQuadCurve(to: P(rumpX + 0.14, rumpY - 0.32 - pose.sitFold * 0.08),
-                          control: P(0.08, shoulderY - 0.66 + pose.crouch * 0.12))
-        body.closeSubpath()
+        let spineTopY = (shoulderY + rumpY) / 2 + 0.17 + pose.backArch
+        let bellyY = shoulderY - 0.50 + pose.crouch * 0.22
+        var outline: [(CGFloat, CGFloat)] = []
+        outline.append(H(R * 0.55, -R * 0.98))                              // under chin
+        outline.append((shoulderX + 0.14 + sit * 0.11, shoulderY - 0.34 - sit * 0.04)) // chest
+        outline.append(((shoulderX + rumpX) / 2 + 0.06, bellyY))            // belly
+        outline.append((rumpX + 0.30, rumpY - 0.38 - sit * 0.10))           // groin / thigh front
+        outline.append((rumpX - 0.16, rumpY - 0.30 - sit * 0.12))           // under tail
+        outline.append((rumpX - 0.24 - sit * 0.06, rumpY + 0.02))           // rump back
+        outline.append((rumpX - 0.12, rumpY + 0.18 + pose.backArch * 0.5))  // rump top
+        outline.append(((rumpX + shoulderX) / 2, spineTopY))                // spine crest
+        outline.append((shoulderX - 0.02 - sit * 0.10, shoulderY + 0.19 + sit * 0.06 + pose.backArch * 0.3)) // withers
+        outline.append((shoulderX + 0.16 - sit * 0.08, shoulderY + 0.06 + sit * 0.26)) // neck top
+        outline.append(H(-R * 0.72, R * 0.72))                              // crown back
+        outline.append(H(-R * 0.05, R * 1.02))                              // crown top
+        outline.append(H(R * 0.66, R * 0.76))                               // forehead
+        outline.append(H(R * 0.95, R * 0.12))                               // nose bridge
+        outline.append(H(R * 1.00, -R * 0.30))                              // muzzle / nose
+        outline.append(H(R * 0.80, -R * 0.72))                              // chin
         ctx.setFillColor(bodyColor.cgColor)
-        ctx.addPath(body)
+        ctx.addPath(Self.catmull(mapped(outline), closed: true))
         ctx.fillPath()
 
-        // --- Head group: a GUARANTEED-round skull (filled circle), two big triangle
-        // ears, and a neck capsule joining it to the shoulders — built the way the
-        // reference silhouettes are, instead of fighting one giant outline path.
-        let hp = headPitch
-        let R: CGFloat = 0.35                          // skull radius (size units)
-        let hcx = headX + 0.02, hcy = headY + 0.02 + hp * 0.22
-        let headC = P(hcx, hcy)
-
-        // Neck capsule.
-        ctx.setStrokeColor(bodyColor.cgColor)
-        ctx.setLineWidth(s * 0.4)
-        ctx.beginPath()
-        ctx.move(to: P(shoulderX - 0.02, shoulderY - 0.14))
-        ctx.addLine(to: P(hcx - R * 0.3, hcy - R * 0.3))
-        ctx.strokePath()
-
-        // Ears BEHIND the skull circle so their bases are swallowed cleanly.
+        // Ears: filled triangles seated on the skull circle, drawn over the fill.
         let flick = earFlick * 0.1
-        let earLen = R * (0.62 + 0.5 * pose.earPerk)   // big ears — a cat signature
+        let earLen = R * (0.62 + 0.5 * pose.earPerk)
         func ear(baseA: CGFloat, tipA: CGFloat, tipLen: CGFloat) {
             let e = CGMutablePath()
             let a1 = baseA - 0.42, a2 = baseA + 0.42
             e.move(to: P(hcx + cos(a1) * R * 0.92, hcy + sin(a1) * R * 0.92))
             let tip = (x: hcx + cos(tipA) * (R * 0.75 + tipLen), y: hcy + sin(tipA) * (R * 0.75 + tipLen))
-            // Outer edge slightly convex, inner edge straight — a real ear, not a spike.
             e.addQuadCurve(to: P(tip.x, tip.y),
                            control: P(hcx + cos(a1 + 0.16) * (R + tipLen * 0.7), hcy + sin(a1 + 0.16) * (R + tipLen * 0.7)))
             e.addLine(to: P(hcx + cos(a2) * R * 0.92, hcy + sin(a2) * R * 0.92))
@@ -581,22 +641,13 @@ final class KiddyCat {
             ctx.addPath(e)
             ctx.fillPath()
         }
-        ctx.setFillColor(bodyColor.cgColor)
         ear(baseA: 2.0, tipA: 2.05 + flick, tipLen: earLen)        // rear ear
         ear(baseA: 1.05, tipA: 0.95, tipLen: earLen)               // front ear
 
-        // Skull.
-        let Rs = R * s
-        ctx.fillEllipse(in: CGRect(x: headC.x - Rs, y: headC.y - Rs, width: Rs * 2, height: Rs * 2))
-        // A soft cheek/muzzle hint: one small ellipse low-front on the circle.
-        let mzR = Rs * 0.34
-        let mz = P(hcx + R * 0.78 * 1.0, hcy - R * 0.28)
-        ctx.fillEllipse(in: CGRect(x: mz.x - mzR, y: mz.y - mzR * 0.8, width: mzR * 2, height: mzR * 1.6))
-
-        // Sitting haunch: a rounded thigh mass over the folded rear.
-        if pose.sitFold > 0.15 {
+        // Sitting: haunch mass over the folded rear, blended into the outline.
+        if sit > 0.15 {
             let hx = P(rumpX + 0.16, rumpY * 0.45)
-            let hr = s * 0.42 * pose.sitFold
+            let hr = s * 0.42 * sit
             ctx.fillEllipse(in: CGRect(x: hx.x - hr, y: hx.y - hr * 0.95, width: hr * 2, height: hr * 1.9))
         }
 
@@ -607,7 +658,7 @@ final class KiddyCat {
         // --- Eye (with blink) ---
         let eyeOpen = 1 - blinkPhase
         if eyeOpen > 0.08 {
-            let e = P(headX + 0.02 + 0.13, headY + 0.06 + headPitch * 0.24)
+            let e = P(hcx + 0.13, hcy + 0.04 + hp * 0.1)
             let ew = s * 0.055, eh = s * 0.075 * eyeOpen
             ctx.setFillColor(NSColor(srgbRed: 0.55, green: 0.95, blue: 0.55, alpha: 0.95).cgColor)
             ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))

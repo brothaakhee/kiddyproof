@@ -234,7 +234,7 @@ final class KiddyCat {
         case .walk, .trot: return (0.75, 1.0)             // raised, confident
         case .startle: return (1.1, 0)                    // bottle-brush up
         case .pounceAir: return (0.2, 0)                  // streams back in flight
-        case .sit, .groom, .lie: return (0.14, 0.35)      // wrapped low, tip curled
+        case .sit, .groom, .lie: return (0.22, 0.35)      // wrapped low, tip curled
         default: return (0.55, 0.6)
         }
     }
@@ -258,7 +258,7 @@ final class KiddyCat {
             vel.x += CGFloat(sin(now * (1.3 + Double(sway)) + Double(t) * 2.6)) * sway * t * size * 0.5 * dt
             // Sitting: the tail curls forward and wraps around the paws.
             if state == .sit || state == .groom || state == .lie {
-                vel.x += facing * t * t * size * 2.6 * dt * dt * 60
+                vel.x += facing * t * t * size * 1.9 * dt * dt * 60
             }
             tailPrev[i] = cur
             tail[i] = cur + vel
@@ -267,6 +267,25 @@ final class KiddyCat {
         }
         tail[0] = root
         tailPrev[0] = root
+        // Seated/loafing: after the physics settle, ease the chain onto an
+        // AUTHORED wrap — down from the rump, forward along the ground past the
+        // paws, tip curled up — the reference pose physics alone won't find.
+        if state == .sit || state == .groom || state == .lie {
+            let settle = CGFloat(min(1, max(0, stateTime - 0.4) * 0.9))
+            if settle > 0 {
+                let n = tail.count
+                for i in 1..<n {
+                    let t = CGFloat(i) / CGFloat(n - 1)
+                    let tx = pos.x + facing * size * (-0.56 + 1.02 * t)
+                    let drop = 0.42 * (1 - t) * (1 - t)
+                    let curl = t > 0.82 ? (t - 0.82) * 0.9 : 0
+                    let ty = groundY + size * (0.09 + drop + curl)
+                    let k = settle * min(1, dt * 5)
+                    tail[i].x += (tx - tail[i].x) * k
+                    tail[i].y += (ty - tail[i].y) * k
+                }
+            }
+        }
         // Constraint passes keep segment lengths.
         for _ in 0..<3 {
             for i in 1..<tail.count {
@@ -309,7 +328,7 @@ final class KiddyCat {
             // The royal sit: tall vertical chest over straight front legs, haunches
             // rounded behind, head high (groom: head dipped to the chest).
             p.sitFold = 1
-            p.rumpHeight = 0.46
+            p.rumpHeight = 0.50
             p.shoulderHeight = 1.0
             p.headHeight = state == .groom ? 0.92 : 1.3
             p.headForward = state == .groom ? 0.42 : 0.5
@@ -633,7 +652,7 @@ final class KiddyCat {
             (hcx + dx * ca - dy * sa, hcy + dx * sa + dy * ca)
         }
         let spineTopY = (shoulderY + rumpY) / 2 + 0.17 + pose.backArch
-        let bellyY = shoulderY - 0.50 + pose.crouch * 0.22
+        let bellyY = shoulderY - 0.47 + pose.crouch * 0.22
         var outline: [(CGFloat, CGFloat)] = []
         outline.append(H(R * 0.15, -R * 0.94))                              // under jaw
         outline.append((shoulderX + 0.18 + sit * 0.11, shoulderY - 0.40 - sit * 0.02)) // chest
@@ -678,7 +697,7 @@ final class KiddyCat {
         // Sitting: haunch mass over the folded rear, blended into the outline.
         if sit > 0.15 {
             let hx = P(rumpX + 0.16, rumpY * 0.45)
-            let hr = s * 0.42 * sit
+            let hr = s * 0.38 * sit
             ctx.fillEllipse(in: CGRect(x: hx.x - hr, y: hx.y - hr * 0.95, width: hr * 2, height: hr * 1.9))
         }
 

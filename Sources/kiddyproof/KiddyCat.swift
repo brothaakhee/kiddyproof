@@ -329,8 +329,8 @@ final class KiddyCat {
             // rounded behind, head high (groom: head dipped to the chest).
             p.sitFold = 1
             p.rumpHeight = 0.50
-            p.shoulderHeight = 1.0
-            p.headHeight = state == .groom ? 0.92 : 1.3
+            p.shoulderHeight = 1.06
+            p.headHeight = state == .groom ? 0.92 : 1.38
             p.headForward = state == .groom ? 0.42 : 0.5
             p.earPerk = state == .groom ? 0.45 : 0.8
         case .stretch:
@@ -545,7 +545,7 @@ final class KiddyCat {
         // Anchor geometry.
         let stretch = pose.bodyStretch
         let shoulderX: CGFloat = 0.52 + stretch * 0.25 - pose.sitFold * 0.3
-        let rumpX: CGFloat = -(0.70 + stretch * 0.2 - pose.sitFold * 0.10)
+        let rumpX: CGFloat = -(0.74 + stretch * 0.2 - pose.sitFold * 0.10)
         let shoulderY = pose.shoulderHeight
         let rumpY = pose.rumpHeight
         let headX = pose.headForward + stretch * 0.2
@@ -674,14 +674,14 @@ final class KiddyCat {
 
         // Head group: wide round skull with soft cheeks.
         let flick = earFlick * 0.06
-        let hw: CGFloat = 0.44, hh: CGFloat = 0.385  // skull radii
+        let hw: CGFloat = 0.41, hh: CGFloat = 0.36   // skull radii
         let headC = P(hcx, hcy)
         // Ears first (bases swallowed by the skull): symmetric, canted outward.
         func frontEar(_ side: CGFloat, cant: CGFloat) {
             let e = CGMutablePath()
-            let baseIn  = (hcx + side * hw * 0.22, hcy + hh * 0.78)
-            let baseOut = (hcx + side * hw * 0.88, hcy + hh * 0.34)
-            let tip     = (hcx + side * hw * (0.94 + cant), hcy + hh * (1.44 + pose.earPerk * 0.22))
+            let baseIn  = (hcx + side * hw * 0.16, hcy + hh * 0.80)
+            let baseOut = (hcx + side * hw * 0.94, hcy + hh * 0.28)
+            let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.34 + pose.earPerk * 0.20))
             e.move(to: P(baseIn.0, baseIn.1))
             e.addLine(to: P(tip.0, tip.1))
             // Convex outer edge.

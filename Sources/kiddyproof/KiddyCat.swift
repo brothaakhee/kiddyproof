@@ -294,9 +294,9 @@ final class KiddyCat {
                 let n = tail.count
                 for i in 1..<n {
                     let t = CGFloat(i) / CGFloat(n - 1)
-                    let tx = pos.x + facing * size * (-0.56 + 0.92 * t)
+                    let tx = pos.x + facing * size * (-0.56 + 0.74 * t)
                     let drop = 0.42 * (1 - t) * (1 - t)
-                    let curl = t > 0.78 ? (t - 0.78) * 1.6 : 0
+                    let curl = t > 0.72 ? (t - 0.72) * 1.9 : 0
                     let ty = groundY + size * (0.09 + drop + curl)
                     let k = settle * min(1, dt * 5)
                     let dx = (tx - tail[i].x) * k, dy = (ty - tail[i].y) * k
@@ -366,9 +366,9 @@ final class KiddyCat {
             p.backArch = 0.05
             p.shoulderHeight = 0.86
         case .lie:
-            // The loaf: a smooth low mound, head up, everything tucked.
-            p.shoulderHeight = 0.58
-            p.rumpHeight = 0.60
+            // The loaf: a smooth chunky mound, head up, everything tucked.
+            p.shoulderHeight = 0.70
+            p.rumpHeight = 0.72
             p.headHeight = 0.98
             p.headForward = 0.55
             p.crouch = 0.55

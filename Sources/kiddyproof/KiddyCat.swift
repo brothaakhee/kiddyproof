@@ -723,16 +723,25 @@ final class KiddyCat {
             ctx.strokePath()
         }
 
-        // --- Eye (with blink): almond with a slit pupil.
+        // --- Eye (with blink): light almond with a dark slit, per the reference.
         let eyeOpen = 1 - blinkPhase
         if eyeOpen > 0.08 {
             let e = P(hcx + R * 0.42, hcy + R * 0.22 + hp * 0.03)
             let ew = s * 0.055, eh = s * 0.070 * eyeOpen
-            ctx.setFillColor(NSColor(srgbRed: 0.55, green: 0.95, blue: 0.55, alpha: 0.95).cgColor)
+            ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
             ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
-            ctx.setFillColor(NSColor.black.cgColor)
-            ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.22, y: e.y - eh * 0.9, width: ew * 0.44, height: eh * 1.8))
+            ctx.setFillColor(bodyColor.cgColor)
+            ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.24, y: e.y - eh * 0.85, width: ew * 0.48, height: eh * 1.7))
         }
+        // Mouth: a small accent curve under the nose (reference face detail).
+        ctx.setStrokeColor(accent.withAlphaComponent(0.8).cgColor)
+        ctx.setLineWidth(s * 0.016)
+        let m0 = H(R * 0.96, -R * 0.34)
+        let m1 = H(R * 0.66, -R * 0.44)
+        ctx.beginPath()
+        ctx.move(to: P(m0.0, m0.1))
+        ctx.addQuadCurve(to: P(m1.0, m1.1), control: P((m0.0 + m1.0) / 2, m1.1 - 0.03))
+        ctx.strokePath()
         ctx.setAlpha(1)
     }
 

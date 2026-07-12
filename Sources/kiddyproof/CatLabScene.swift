@@ -36,6 +36,9 @@ final class CatLabScene: Scene {
 
     func handle(_ e: InputEvent, _ ctx: EffectContext) {
         guard !draining, let cat = cat else { return }
+        // Pose-capture mode: demo/user input must not fight the pinned state
+        // (every set(state:) resets stateTime and the settle-gated tail poses).
+        guard pinned == nil else { return }
         switch e.kind {
         case .key:
             cat.startle()

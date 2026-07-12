@@ -267,6 +267,24 @@ final class KiddyCat {
         }
         tail[0] = root
         tailPrev[0] = root
+        // Standing/walking: ease toward the reference's tall S-curve carriage
+        // (bows back mid-length, tip hooks forward). Weak pull — the verlet
+        // sway stays audible on top.
+        if state == .idle || state == .walk || state == .trot {
+            let settle = CGFloat(min(1, max(0, stateTime - 0.3) * 0.8))
+            if settle > 0 {
+                let n = tail.count
+                for i in 1..<n {
+                    let t = CGFloat(i) / CGFloat(n - 1)
+                    let tx = pos.x + facing * size * (-0.60 - 0.26 * sin(.pi * t) + 0.18 * t)
+                    let ty = groundY + size * (0.86 + 1.28 * t)
+                    let k = settle * min(1, dt * 9)
+                    let dx = (tx - tail[i].x) * k, dy = (ty - tail[i].y) * k
+                    tail[i].x += dx; tail[i].y += dy
+                    tailPrev[i].x += dx; tailPrev[i].y += dy   // no velocity injection
+                }
+            }
+        }
         // Seated/loafing: after the physics settle, ease the chain onto an
         // AUTHORED wrap — down from the rump, forward along the ground past the
         // paws, tip curled up — the reference pose physics alone won't find.
@@ -281,8 +299,9 @@ final class KiddyCat {
                     let curl = t > 0.78 ? (t - 0.78) * 1.6 : 0
                     let ty = groundY + size * (0.09 + drop + curl)
                     let k = settle * min(1, dt * 5)
-                    tail[i].x += (tx - tail[i].x) * k
-                    tail[i].y += (ty - tail[i].y) * k
+                    let dx = (tx - tail[i].x) * k, dy = (ty - tail[i].y) * k
+                    tail[i].x += dx; tail[i].y += dy
+                    tailPrev[i].x += dx; tailPrev[i].y += dy   // no velocity injection
                 }
             }
         }
@@ -328,8 +347,8 @@ final class KiddyCat {
             // The royal sit: tall vertical chest over straight front legs, haunches
             // rounded behind, head high (groom: head dipped to the chest).
             p.sitFold = 1
-            p.rumpHeight = 0.50
-            p.shoulderHeight = 1.06
+            p.rumpHeight = 0.52
+            p.shoulderHeight = 1.10
             p.headHeight = state == .groom ? 0.92 : 1.38
             p.headForward = state == .groom ? 0.42 : 0.5
             p.earPerk = state == .groom ? 0.45 : 0.8
@@ -810,7 +829,7 @@ final class KiddyCat {
             ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
             ctx.setLineWidth(s * 0.017)
             for side: CGFloat in [-1, 1] {
-                for (dy, len) in [(CGFloat(0.02), CGFloat(0.26)), (CGFloat(-0.05), CGFloat(0.30)), (CGFloat(-0.12), CGFloat(0.25))] {
+                for (dy, len) in [(CGFloat(0.02), CGFloat(0.22)), (CGFloat(-0.05), CGFloat(0.26)), (CGFloat(-0.12), CGFloat(0.21))] {
                     ctx.beginPath()
                     ctx.move(to: P(hcx + side * hw * 0.55, hcy + fy - 0.10 + dy * 0.5))
                     ctx.addLine(to: P(hcx + side * (hw * 0.55 + len), hcy + fy - 0.10 + dy))

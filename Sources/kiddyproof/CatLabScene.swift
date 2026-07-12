@@ -90,7 +90,7 @@ final class CatLabScene: Scene {
         let laserNear = laserDist < ctx.bounds.width * 0.4 && laser.y < cat.groundY + 320
 
         switch cat.state {
-        case .idle, .sit, .groom, .stretch, .lie, .walk, .trot:
+        case .idle, .sit, .groom, .stretch, .lie, .walk, .trot, .play, .eat:
             cat.interest = laserNear ? laser : nil
             if laserNear, laserMoved > 6 {
                 // A moving dot is irresistible.
@@ -98,7 +98,7 @@ final class CatLabScene: Scene {
                 cat.set(state: laserDist > 420 ? .trot : .stalk)
             } else if now >= nextIdleChange {
                 // Autonomous life: amble, rest, groom, stretch.
-                let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot]
+                let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot, .play, .eat]
                 let pick = choices[rng.int(choices.count)]
                 if pick == .walk || pick == .trot { cat.face(rng.unit() > 0.5 ? 1 : -1) }
                 // Re-picking the current state must not reset its settle clock —

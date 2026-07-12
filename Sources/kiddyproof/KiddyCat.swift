@@ -19,7 +19,7 @@ final class KiddyCat {
     var style: Style = .silhouette
 
     enum State: String {
-        case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle
+        case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle, play, eat
     }
 
     // MARK: Public surface
@@ -234,7 +234,8 @@ final class KiddyCat {
         case .walk, .trot: return (0.74, 0.9)             // raised, soft S
         case .startle: return (1.1, 0)                    // bottle-brush up
         case .pounceAir: return (1.0, 0)                  // carried up-back in flight
-        case .sit, .groom, .lie: return (0.22, 0.35)      // wrapped low, tip curled
+        case .sit, .groom, .lie, .eat: return (0.22, 0.35)  // wrapped low, tip curled
+        case .play: return (0.85, 1.6)                    // raised, whippy
         default: return (0.55, 0.6)
         }
     }
@@ -257,7 +258,7 @@ final class KiddyCat {
             vel.y += (lift * t * size * 5.2 - size * 2.2) * dt * dt * 60
             vel.x += CGFloat(sin(now * (1.3 + Double(sway)) + Double(t) * 2.6)) * sway * t * size * 0.5 * dt
             // Sitting: the tail curls forward and wraps around the paws.
-            if state == .sit || state == .groom || state == .lie {
+            if state == .sit || state == .groom || state == .lie || state == .eat {
                 vel.x += facing * t * t * size * 1.9 * dt * dt * 60
             }
             tailPrev[i] = cur
@@ -291,7 +292,7 @@ final class KiddyCat {
         // Seated/loafing: after the physics settle, ease the chain onto an
         // AUTHORED wrap — down from the rump, forward along the ground past the
         // paws, tip curled up — the reference pose physics alone won't find.
-        if state == .sit || state == .groom || state == .lie {
+        if state == .sit || state == .groom || state == .lie || state == .eat {
             let settle = CGFloat(min(1, max(0, stateTime - 0.4) * 0.9))
             if settle > 0 {
                 let n = tail.count
@@ -397,6 +398,21 @@ final class KiddyCat {
             p.headHeight = 1.18
             p.frontLegBend = -0.5      // reaching
             p.rearLegBend = -0.6
+        case .play:
+            // Batting crouch: chest low over the toy, head down watching it.
+            p.crouch = 0.45
+            p.shoulderHeight = 0.72
+            p.headHeight = 0.66
+            p.headForward = 1.05
+            p.earPerk = 1
+        case .eat:
+            // Hunched over the bowl: mound back, head dropped to the ground.
+            p.crouch = 0.6
+            p.shoulderHeight = 0.78
+            p.rumpHeight = 0.66
+            p.headHeight = 0.45
+            p.headForward = 0.95
+            p.earPerk = 0.4
         case .land:
             p.crouch = 0.5
             p.headHeight = 0.85
@@ -654,11 +670,14 @@ final class KiddyCat {
 
         // --- TRACED reference silhouettes for settled static poses: the resting
         // cat IS the sheet's outline (digitized), while the rig owns all motion.
-        let tracedPose: ([(CGFloat, CGFloat)], CGFloat, (CGFloat, CGFloat, CGFloat)?, [[(CGFloat, CGFloat)]])? = {
+        typealias Traced = (pts: [(CGFloat, CGFloat)], scale: CGFloat,
+                            face: (CGFloat, CGFloat, CGFloat)?,
+                            accents: [[(CGFloat, CGFloat)]], props: [[(CGFloat, CGFloat)]])
+        let tracedPose: Traced? = {
             // Ballistic flight: legs are frozen mid-reach, so the traced leap
             // silhouette is correct the moment the windup blend completes.
             if state == .pounceAir, blend >= 0.6 {
-                return (KiddyCatTraced.leap, KiddyCatTraced.leapScale, nil, [])
+                return (KiddyCatTraced.leap, KiddyCatTraced.leapScale, nil, [], [])
             }
             // Locomotion: ping-pong between the two traced walk keyframes
             // (reach ↔ passing), phase-locked to the planted-feet gait clock.
@@ -668,22 +687,29 @@ final class KiddyCat {
                 let pts = zip(KiddyCatTraced.walkA, KiddyCatTraced.walkB).map {
                     ($0.0 + ($1.0 - $0.0) * tt, $0.1 + ($1.1 - $0.1) * tt)
                 }
-                return (pts, KiddyCatTraced.walkScale, nil, [])
+                return (pts, KiddyCatTraced.walkScale, nil, [], [])
             }
             guard blend >= 1, abs(speed) < 1, stateTime > 0.9 else { return nil }
             switch state {
-            case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents)
-            case .lie:  return (KiddyCatTraced.loaf, KiddyCatTraced.loafScale, KiddyCatTraced.loafFace, KiddyCatTraced.loafAccents)
-            case .idle: return (KiddyCatTraced.stand, KiddyCatTraced.standScale, KiddyCatTraced.standFace, KiddyCatTraced.standAccents)
+            case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents, [])
+            case .lie:  return (KiddyCatTraced.loaf, KiddyCatTraced.loafScale, KiddyCatTraced.loafFace, KiddyCatTraced.loafAccents, [])
+            case .idle: return (KiddyCatTraced.stand, KiddyCatTraced.standScale, KiddyCatTraced.standFace, KiddyCatTraced.standAccents, [])
+            case .play: return (KiddyCatTraced.play, KiddyCatTraced.playScale, nil, KiddyCatTraced.playAccents, KiddyCatTraced.playProps)
+            case .eat:  return (KiddyCatTraced.eat, KiddyCatTraced.eatScale, nil, KiddyCatTraced.eatAccents, KiddyCatTraced.eatProps)
             default: return nil
             }
         }()
-        if let (tpts, tscale, tface, taccents) = tracedPose {
+        if let (tpts, tscale, tface, taccents, tprops) = tracedPose {
             // Sheet cats face left; negate x so trace-forward = P-forward.
             let pts = tpts.map { P(-$0.0 * tscale, $0.1 * tscale) }
             ctx.setFillColor(bodyColor.cgColor)
             ctx.addPath(Self.catmull(pts, closed: true))
             ctx.fillPath()
+            // Props (yarn ball, bowl) — part of the reference scene, same frame.
+            for prop in tprops {
+                ctx.addPath(Self.catmull(prop.map { P(-$0.0 * tscale, $0.1 * tscale) }, closed: true))
+                ctx.fillPath()
+            }
             // Accent strokes extracted from the same reference mask.
             ctx.setStrokeColor(accent.cgColor)
             ctx.setLineWidth(s * 0.028)
@@ -694,6 +720,24 @@ final class KiddyCat {
             if let tface = tface {
                 frontFace(-tface.0 * tscale, tface.1 * tscale, tface.2 * tscale, tface.2 * tscale * 0.88,
                           sleepy: state == .lie)
+            }
+            // Profile eyes for the prop poses (open almond playing; closed eating).
+            if state == .play {
+                let e = P(-KiddyCatTraced.playEye.0 * tscale, KiddyCatTraced.playEye.1 * tscale)
+                ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
+                let ew = s * 0.055, eh = s * 0.038
+                ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
+                ctx.setFillColor(bodyColor.cgColor)
+                ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.35, y: e.y - eh * 0.8, width: ew * 0.7, height: eh * 1.6))
+            } else if state == .eat {
+                let e = P(-KiddyCatTraced.eatEye.0 * tscale, KiddyCatTraced.eatEye.1 * tscale)
+                ctx.setStrokeColor(accent.withAlphaComponent(0.9).cgColor)
+                ctx.setLineWidth(s * 0.024)
+                ctx.beginPath()
+                ctx.move(to: CGPoint(x: e.x - s * 0.05 * f, y: e.y + s * 0.012))
+                ctx.addQuadCurve(to: CGPoint(x: e.x + s * 0.05 * f, y: e.y + s * 0.012),
+                                 control: CGPoint(x: e.x, y: e.y - s * 0.055))
+                ctx.strokePath()
             }
             ctx.setAlpha(1)
             return

@@ -176,6 +176,7 @@ final class KiddyCat {
         headPitch += (wantHead - headPitch) * min(1, dt * 6)
 
         updateTail(dt: dt)
+        updateMorph(dt: dt)
     }
 
     private func headWorldX() -> CGFloat { pos.x + facing * size * 1.05 }
@@ -323,6 +324,53 @@ final class KiddyCat {
                 }
             }
         }
+    }
+
+    // MARK: Morph outline — ONE cat, continuously deformed
+    //
+    // Every state targets a traced reference outline (all in the same shared,
+    // area-normalized, index-aligned space — see KiddyCatTraced). The rendered
+    // shape is a single point array that eases toward the active target every
+    // frame: state changes are smooth shape morphs, never jump cuts, and the
+    // silhouette can never change size or style between movement modes.
+    private var morph: [(CGFloat, CGFloat)] = []
+    private var morphSettle: CGFloat = 0     // 1 when the shape has reached its pose
+
+    private func targetOutline() -> [(CGFloat, CGFloat)] {
+        switch state {
+        case .idle, .startle: return KiddyCatTraced.stand
+        case .sit, .groom:    return KiddyCatTraced.sit
+        case .lie:            return KiddyCatTraced.loaf
+        case .stretch, .play: return KiddyCatTraced.play
+        case .eat:            return KiddyCatTraced.eat
+        case .stalk, .pounceWindup, .land: return KiddyCatTraced.prowl
+        case .pounceAir:      return KiddyCatTraced.leap
+        case .walk, .trot:
+            // Ping-pong between the two walk keyframes, locked to the gait clock.
+            let ph = gaitPhase.truncatingRemainder(dividingBy: 1)
+            let tt = ph < 0.5 ? ph * 2 : 2 - ph * 2
+            return zip(KiddyCatTraced.walkA, KiddyCatTraced.walkB).map {
+                ($0.0 + ($1.0 - $0.0) * tt, $0.1 + ($1.1 - $0.1) * tt)
+            }
+        }
+    }
+
+    private func updateMorph(dt: CGFloat) {
+        let target = targetOutline()
+        if morph.count != target.count { morph = target }
+        var total: CGFloat = 0
+        for i in 0..<morph.count {
+            total += abs(target[i].0 - morph[i].0) + abs(target[i].1 - morph[i].1)
+        }
+        let avg = total / CGFloat(morph.count)
+        // Far from the pose → deliberate morph (~0.3s). Near → tight tracking,
+        // so the walk cycle's fast keyframe motion isn't low-pass blurred away.
+        let k = min(1, dt * (avg < 0.08 ? 22 : 8))
+        for i in 0..<morph.count {
+            morph[i].0 += (target[i].0 - morph[i].0) * k
+            morph[i].1 += (target[i].1 - morph[i].1) * k
+        }
+        morphSettle = max(0, min(1, (0.10 - avg) / 0.07))
     }
 
     // MARK: Pose
@@ -568,7 +616,6 @@ final class KiddyCat {
     }
 
     private func drawSilhouette(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
-        let pose = currentPose()
         let s = size
         let f = facing
         let gx = pos.x - origin.x
@@ -576,23 +623,9 @@ final class KiddyCat {
 
         let bodyColor = blendColor(NSColor(srgbRed: 0.75, green: 0.72, blue: 0.7, alpha: 1),
                                    NSColor(srgbRed: 0.07, green: 0.06, blue: 0.08, alpha: 1), 0.25 + 0.75 * w)
-        let farColor = blendColor(bodyColor, NSColor(white: 0.5 * (1 - w), alpha: 1), 0.3)
-
         @inline(__always) func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
             CGPoint(x: gx + x * f * s, y: gy + y * s)
         }
-        func mapped(_ pts: [(CGFloat, CGFloat)]) -> [CGPoint] { pts.map { P($0.0, $0.1) } }
-
-        // Anchor geometry.
-        let stretch = pose.bodyStretch
-        let shoulderX: CGFloat = 0.52 + stretch * 0.25 - pose.sitFold * 0.3
-        let rumpX: CGFloat = -(0.78 + stretch * 0.2 - pose.sitFold * 0.10)
-        let shoulderY = pose.shoulderHeight
-        let rumpY = pose.rumpHeight
-        let headX = pose.headForward + stretch * 0.2
-        let headY = pose.headHeight
-        let stride = strideLength()
-        let sit = pose.sitFold
 
         ctx.setAlpha(1)
         ctx.setBlendMode(.normal)
@@ -668,326 +701,73 @@ final class KiddyCat {
             ctx.strokePath()
         }
 
-        // --- TRACED reference silhouettes for settled static poses: the resting
-        // cat IS the sheet's outline (digitized), while the rig owns all motion.
-        typealias Traced = (pts: [(CGFloat, CGFloat)], scale: CGFloat,
-                            face: (CGFloat, CGFloat, CGFloat)?,
-                            accents: [[(CGFloat, CGFloat)]], props: [[(CGFloat, CGFloat)]])
-        let tracedPose: Traced? = {
-            // Ballistic flight: legs are frozen mid-reach, so the traced leap
-            // silhouette is correct the moment the windup blend completes.
-            if state == .pounceAir, blend >= 0.6 {
-                return (KiddyCatTraced.leap, KiddyCatTraced.leapScale, nil, [], [])
-            }
-            // Locomotion: ping-pong between the two traced walk keyframes
-            // (reach ↔ passing), phase-locked to the planted-feet gait clock.
-            if state == .walk || state == .trot, blend >= 1, abs(speed) > 1 {
-                let ph = gaitPhase.truncatingRemainder(dividingBy: 1)
-                let tt = ph < 0.5 ? ph * 2 : 2 - ph * 2
-                let pts = zip(KiddyCatTraced.walkA, KiddyCatTraced.walkB).map {
-                    ($0.0 + ($1.0 - $0.0) * tt, $0.1 + ($1.1 - $0.1) * tt)
-                }
-                return (pts, KiddyCatTraced.walkScale, nil, [], [])
-            }
-            guard blend >= 1, abs(speed) < 1, stateTime > 0.9 else { return nil }
-            switch state {
-            case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents, [])
-            case .lie:  return (KiddyCatTraced.loaf, KiddyCatTraced.loafScale, KiddyCatTraced.loafFace, KiddyCatTraced.loafAccents, [])
-            case .idle: return (KiddyCatTraced.stand, KiddyCatTraced.standScale, KiddyCatTraced.standFace, KiddyCatTraced.standAccents, [])
-            case .play: return (KiddyCatTraced.play, KiddyCatTraced.playScale, nil, KiddyCatTraced.playAccents, KiddyCatTraced.playProps)
-            case .eat:  return (KiddyCatTraced.eat, KiddyCatTraced.eatScale, nil, KiddyCatTraced.eatAccents, KiddyCatTraced.eatProps)
-            default: return nil
-            }
-        }()
-        if let (tpts, tscale, tface, taccents, tprops) = tracedPose {
-            // Sheet cats face left; negate x so trace-forward = P-forward.
-            let pts = tpts.map { P(-$0.0 * tscale, $0.1 * tscale) }
-            ctx.setFillColor(bodyColor.cgColor)
-            ctx.addPath(Self.catmull(pts, closed: true))
-            ctx.fillPath()
-            // Props (yarn ball, bowl) — part of the reference scene, same frame.
-            for prop in tprops {
-                ctx.addPath(Self.catmull(prop.map { P(-$0.0 * tscale, $0.1 * tscale) }, closed: true))
-                ctx.fillPath()
-            }
-            // Accent strokes extracted from the same reference mask.
+        // --- The one body: the continuously-morphing traced outline, plus a
+        // whisper of breath so a settled cat is never frozen.
+        let breathe = 1 + 0.006 * CGFloat(sin(now * 2.1)) * morphSettle
+        let pts = morph.map { P(-$0.0, $0.1 * breathe) }
+        ctx.setFillColor(bodyColor.cgColor)
+        ctx.addPath(Self.catmull(pts, closed: true))
+        ctx.fillPath()
+
+        // Pose dressing — the reference's own accents, faces, and props —
+        // fades in once the morph has arrived, out as it departs.
+        guard morphSettle > 0.02 else { ctx.setAlpha(1); return }
+        ctx.setAlpha(morphSettle)
+        func strokeAccents(_ accents: [[(CGFloat, CGFloat)]]) {
             ctx.setStrokeColor(accent.cgColor)
             ctx.setLineWidth(s * 0.028)
-            for stroke in taccents {
-                ctx.addPath(Self.catmull(stroke.map { P(-$0.0 * tscale, $0.1 * tscale) }, closed: false))
+            for stroke in accents {
+                ctx.addPath(Self.catmull(stroke.map { P(-$0.0, $0.1) }, closed: false))
                 ctx.strokePath()
             }
-            if let tface = tface {
-                frontFace(-tface.0 * tscale, tface.1 * tscale, tface.2 * tscale, tface.2 * tscale * 0.88,
-                          sleepy: state == .lie)
+        }
+        func fillProps(_ props: [[(CGFloat, CGFloat)]]) {
+            ctx.setFillColor(bodyColor.cgColor)
+            for prop in props {
+                ctx.addPath(Self.catmull(prop.map { P(-$0.0, $0.1) }, closed: true))
+                ctx.fillPath()
             }
-            // Profile eyes for the prop poses (open almond playing; closed eating).
-            if state == .play {
-                let e = P(-KiddyCatTraced.playEye.0 * tscale, KiddyCatTraced.playEye.1 * tscale)
-                ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
-                let ew = s * 0.055, eh = s * 0.038
-                ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
-                ctx.setFillColor(bodyColor.cgColor)
-                ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.35, y: e.y - eh * 0.8, width: ew * 0.7, height: eh * 1.6))
-            } else if state == .eat {
-                let e = P(-KiddyCatTraced.eatEye.0 * tscale, KiddyCatTraced.eatEye.1 * tscale)
+        }
+        func profileEye(_ e: (CGFloat, CGFloat), closed: Bool) {
+            let p = P(-e.0, e.1)
+            if closed {
                 ctx.setStrokeColor(accent.withAlphaComponent(0.9).cgColor)
                 ctx.setLineWidth(s * 0.024)
                 ctx.beginPath()
-                ctx.move(to: CGPoint(x: e.x - s * 0.05 * f, y: e.y + s * 0.012))
-                ctx.addQuadCurve(to: CGPoint(x: e.x + s * 0.05 * f, y: e.y + s * 0.012),
-                                 control: CGPoint(x: e.x, y: e.y - s * 0.055))
+                ctx.move(to: CGPoint(x: p.x - s * 0.05 * f, y: p.y + s * 0.012))
+                ctx.addQuadCurve(to: CGPoint(x: p.x + s * 0.05 * f, y: p.y + s * 0.012),
+                                 control: CGPoint(x: p.x, y: p.y - s * 0.055))
                 ctx.strokePath()
-            }
-            ctx.setAlpha(1)
-            return
-        }
-
-        // --- Legs: filled tapered limbs with real anatomy — wide thigh/shoulder,
-        // a hock (reverse heel) on the rear leg, slim pastern, rounded paw.
-        func drawLeg(front: Bool, far: Bool) {
-            let legIdx = (front ? 0 : 2) + (far ? 1 : 0)
-            let rootX = front ? shoulderX - 0.04 : rumpX + 0.12
-            let rootY = front ? shoulderY - 0.05 : rumpY - 0.02
-            var footX = rootX
-            var footY: CGFloat = 0
-            if state == .lie {
-                if !front { return }                       // rear legs fully tucked
-                // Folded forepaw peeking out under the chest.
-                let pw = s * 0.115
-                let pp = P(rootX + 0.30, 0.06)
-                ctx.setFillColor((far ? farColor : bodyColor).cgColor)
-                ctx.fillEllipse(in: CGRect(x: pp.x - pw * 1.3, y: pp.y - pw * 0.7,
-                                           width: pw * 2.6, height: pw * 1.4))
-                return
-            }
-            if sit > 0.5 && !front {
-                footX = rootX + 0.36; footY = 0
-            } else if sit > 0.5 && front {
-                footX = rootX + sit * 0.12; footY = 0
             } else {
-                let (dx, lift) = footOffset(legIdx, stride: stride / s)
-                footX = rootX + dx
-                footY = lift / s
-                if front, pose.frontLegBend > 0 {
-                    // Play-bow: forepaws reach far forward along the ground.
-                    footX = rootX + pose.frontLegBend * 0.5
-                    footY = 0
-                }
-                if state == .pounceAir {
-                    // Airborne: forepaws reach with the arc, rear legs trail.
-                    footX = rootX + (front ? 0.55 : -0.45)
-                    footY = front ? 0.62 : 0.20
-                }
-            }
-            let color = far ? farColor : bodyColor
-            ctx.setFillColor(color.cgColor)
-            let path: CGMutablePath
-            if front {
-                // Shoulder → elbow (slightly back) → wrist → paw.
-                let pts = mapped([
-                    (rootX, rootY),
-                    (rootX * 0.45 + footX * 0.55 - 0.015, (rootY + footY) / 2 + 0.05),
-                    (footX - 0.005, footY + 0.14),
-                    (footX, footY + 0.05),
-                ])
-                path = Self.ribbon(pts, [s * 0.27, s * 0.18, s * 0.14, s * 0.13])
-            } else {
-                // Hip → knee (forward) → hock (heel points BACK — the cat cue) → paw.
-                let fold = 1 - sit
-                let pts = mapped([
-                    (rootX, rootY + 0.06),
-                    (rootX * 0.4 + footX * 0.6 + 0.07 * fold, (rootY + footY) / 2 + 0.04),
-                    (footX - 0.07 * fold, footY + 0.17),
-                    (footX, footY + 0.05),
-                ])
-                path = Self.ribbon(pts, [s * 0.40, s * 0.26, s * 0.15, s * 0.14])
-            }
-            ctx.addPath(path)
-            ctx.fillPath()
-            // Paw: a soft rounded oval, slightly forward.
-            let pw = s * 0.115
-            let pp = P(footX + 0.04, footY + 0.04)
-            ctx.fillEllipse(in: CGRect(x: pp.x - pw, y: pp.y - pw * 0.72, width: pw * 2, height: pw * 1.44))
-        }
-        drawLeg(front: true, far: true)
-        drawLeg(front: false, far: true)
-
-        // --- Tail: one smooth tapered ribbon over the verlet chain — plush base,
-        // soft tip, no segment bulges.
-        do {
-            let pts = tail.map { CGPoint(x: $0.x - origin.x, y: $0.y - origin.y) }
-            let n = pts.count
-            let widths = (0..<n).map { i -> CGFloat in
-                let t = CGFloat(i) / CGFloat(n - 1)
-                return s * (0.165 - 0.045 * t * t)
-            }
-            ctx.setFillColor(bodyColor.cgColor)
-            ctx.addPath(Self.ribbon(pts, widths))
-            ctx.fillPath()
-        }
-
-        // --- Body + head. Like the reference sheet: resting cats (sit, stand,
-        // loaf) turn a FRONT-FACING head to the viewer; action cats (stalk,
-        // leap, stretch) keep a PROFILE head. Flat color unions seamlessly.
-        let profileHead = state == .stalk || state == .pounceWindup || state == .pounceAir
-            || state == .land || state == .stretch || state == .groom
-        let hp = headPitch * (state == .lie ? 0.5 : 1)
-        let hcx = profileHead ? headX - 0.06 : headX - 0.22
-        let hcy = (profileHead ? headY - 0.10 : headY - 0.08) + hp * 0.14
-        let R: CGFloat = 0.33
-        let ca = cos(hp * 0.5), sa = sin(hp * 0.5)
-        func H(_ dx: CGFloat, _ dy: CGFloat) -> (CGFloat, CGFloat) {
-            (hcx + dx * ca - dy * sa, hcy + dx * sa + dy * ca)
-        }
-        let spineTopY = (shoulderY + rumpY) / 2 + 0.17 + pose.backArch
-        let bellyY = shoulderY - 0.47 + pose.crouch * 0.22
-        var outline: [(CGFloat, CGFloat)] = []
-        if profileHead {
-            outline.append(H(R * 0.15, -R * 0.94))                          // under jaw
-        } else {
-            outline.append((hcx + 0.28, hcy - 0.30))                        // under head, front
-        }
-        outline.append((shoulderX + 0.18 + sit * 0.11, shoulderY - 0.40 - sit * 0.02)) // chest
-        outline.append(((shoulderX + rumpX) / 2 + 0.06, bellyY))            // belly
-        outline.append((rumpX + 0.30, rumpY - 0.38 - sit * 0.10))           // groin / thigh front
-        outline.append((rumpX - 0.16, rumpY - 0.30 - sit * 0.12))           // under tail
-        outline.append((rumpX - 0.28 - sit * 0.06, rumpY + 0.02))           // rump back
-        outline.append((rumpX - 0.12, rumpY + 0.21 + pose.backArch * 0.5))  // rump top
-        outline.append(((rumpX + shoulderX) / 2, spineTopY))                // spine crest
-        outline.append((shoulderX - 0.02 - sit * 0.10, shoulderY + 0.19 + sit * 0.06 + pose.backArch * 0.3)) // withers
-        if profileHead {
-            // Profile head riding the outline: crown → brow → nose STEP → chin.
-            outline.append((shoulderX + 0.20 - sit * 0.08, shoulderY + 0.08 + sit * 0.26)) // neck top
-            outline.append(H(-R * 0.66, R * 0.55))                          // crown back
-            outline.append(H(-R * 0.12, R * 0.98))                          // crown top
-            outline.append(H(R * 0.55, R * 0.82))                           // brow
-            outline.append(H(R * 0.90, R * 0.34))                           // stop
-            outline.append(H(R * 1.12, R * 0.02))                           // nose tip
-            outline.append(H(R * 1.05, -R * 0.26))                          // under nose
-            outline.append(H(R * 0.72, -R * 0.56))                          // chin
-            outline.append(H(R * 0.30, -R * 0.84))                          // jaw
-        } else {
-            outline.append((hcx - 0.28, hcy - 0.26))                        // under head, back
-        }
-        ctx.setFillColor(bodyColor.cgColor)
-        ctx.addPath(Self.catmull(mapped(outline), closed: true))
-        ctx.fillPath()
-
-        let flick = earFlick * 0.06
-        let hw: CGFloat = 0.41, hh: CGFloat = 0.36   // front-face skull radii
-        if profileHead {
-            // Profile ears: a tight pair on the crown, rotating with pitch.
-            let earLen = R * (0.60 + 0.36 * pose.earPerk)
-            func profEar(baseA: CGFloat, tipA: CGFloat, tipLen: CGFloat) {
-                let e = CGMutablePath()
-                let a1 = baseA - 0.36, a2 = baseA + 0.36
-                e.move(to: P(hcx + cos(a1) * R * 0.90, hcy + sin(a1) * R * 0.90))
-                let tip = (x: hcx + cos(tipA) * (R * 0.72 + tipLen), y: hcy + sin(tipA) * (R * 0.72 + tipLen))
-                e.addQuadCurve(to: P(tip.x, tip.y),
-                               control: P(hcx + cos(a1 + 0.14) * (R + tipLen * 0.75), hcy + sin(a1 + 0.14) * (R + tipLen * 0.75)))
-                e.addLine(to: P(hcx + cos(a2) * R * 0.90, hcy + sin(a2) * R * 0.90))
-                e.closeSubpath()
-                ctx.addPath(e)
-                ctx.fillPath()
-            }
-            ctx.setFillColor(bodyColor.cgColor)
-            profEar(baseA: 1.70 + hp * 0.5, tipA: 1.78 + hp * 0.5 + flick * 1.6, tipLen: earLen * 0.88)
-            profEar(baseA: 1.26 + hp * 0.5, tipA: 1.14 + hp * 0.5, tipLen: earLen)
-        } else {
-            // Thick neck joining shoulders to skull (fully covered by both).
-            ctx.setStrokeColor(bodyColor.cgColor)
-            ctx.setLineCap(.round)
-            ctx.setLineWidth(s * 0.62)
-            ctx.beginPath()
-            ctx.move(to: P(shoulderX - 0.02, shoulderY - 0.10))
-            ctx.addLine(to: P(hcx, hcy - 0.12))
-            ctx.strokePath()
-            // Symmetric front ears, bases swallowed by the skull.
-            func frontEar(_ side: CGFloat, cant: CGFloat) {
-                let e = CGMutablePath()
-                let baseIn  = (hcx + side * hw * 0.16, hcy + hh * 0.80)
-                let baseOut = (hcx + side * hw * 0.94, hcy + hh * 0.28)
-                let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.24 + pose.earPerk * 0.18))
-                e.move(to: P(baseIn.0, baseIn.1))
-                e.addLine(to: P(tip.0, tip.1))
-                e.addQuadCurve(to: P(baseOut.0, baseOut.1),
-                               control: P(hcx + side * hw * 1.16, hcy + hh * 0.96))
-                e.closeSubpath()
-                ctx.addPath(e)
-                ctx.fillPath()
-            }
-            ctx.setFillColor(bodyColor.cgColor)
-            frontEar(1, cant: flick)          // near-side ear (flicks)
-            frontEar(-1, cant: 0)             // far-side ear
-            // Skull: slightly wider than tall, cheeks full.
-            let headC = P(hcx, hcy)
-            ctx.fillEllipse(in: CGRect(x: headC.x - hw * s, y: headC.y - hh * s,
-                                       width: hw * 2 * s, height: hh * 2 * s))
-        }
-
-        // Sitting: haunch mass over the folded rear, blended into the outline.
-        if sit > 0.15 {
-            let hx = P(rumpX + 0.16, rumpY * 0.45)
-            let hr = s * 0.44 * sit
-            ctx.fillEllipse(in: CGRect(x: hx.x - hr, y: hx.y - hr * 0.95, width: hr * 2, height: hr * 1.9))
-        }
-
-        // --- Near legs over the body ---
-        drawLeg(front: true, far: false)
-        drawLeg(front: false, far: false)
-
-        // --- Accent lines: thin background-colored strokes carving the haunch
-        // and foreleg out of the solid fill — the reference style's signature.
-        ctx.setStrokeColor(accent.cgColor)
-        ctx.setLineWidth(s * 0.028)
-        ctx.setLineCap(.round)
-        // Haunch: a sweeping thigh arc from the tail root around and down.
-        let haunch = CGMutablePath()
-        haunch.move(to: P(rumpX + 0.04 + sit * 0.04, rumpY + 0.02 + sit * 0.08))
-        haunch.addQuadCurve(to: P(rumpX + 0.22 + sit * 0.12, rumpY - 0.50 + sit * 0.18 + pose.crouch * 0.16),
-                            control: P(rumpX + 0.40 + sit * 0.06, rumpY - 0.16))
-        ctx.addPath(haunch)
-        ctx.strokePath()
-        // Foreleg: a short line separating the near front leg from the chest.
-        // Static poses only — a swinging leg leaves the line floating.
-        if state != .pounceAir, state != .lie, pose.frontLegBend <= 0, abs(speed) < size * 0.3 {
-            let leg = CGMutablePath()
-            leg.move(to: P(shoulderX - 0.10 + sit * 0.06, bellyY - 0.01))
-            leg.addQuadCurve(to: P(shoulderX - 0.12 + sit * 0.10, 0.12),
-                             control: P(shoulderX - 0.13 + sit * 0.08, bellyY - 0.18))
-            ctx.addPath(leg)
-            ctx.strokePath()
-        }
-
-        // --- Face. Profile: side eye + forward whiskers (action cats in the
-        // reference). Front: two eyes, nose, ω mouth, whiskers both sides.
-        if profileHead {
-            // Whiskers fanning forward from the muzzle.
-            ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
-            ctx.setLineWidth(s * 0.017)
-            for (dy, len, tilt) in [(CGFloat(-0.06), CGFloat(0.30), CGFloat(0.08)),
-                                    (CGFloat(-0.12), CGFloat(0.33), CGFloat(0.00)),
-                                    (CGFloat(-0.18), CGFloat(0.28), CGFloat(-0.08))] {
-                let base = H(R * 0.88, R * (dy * 2 - 0.18))
-                let tip  = (base.0 + len * ca - tilt * sa, base.1 + len * sa + tilt * ca)
-                ctx.beginPath()
-                ctx.move(to: P(base.0, base.1))
-                ctx.addLine(to: P(tip.0, tip.1 + dy))
-                ctx.strokePath()
-            }
-            // Lidded side eye.
-            if eyeOpen > 0.08 {
-                let e = P(hcx + R * 0.42, hcy + R * 0.22 + hp * 0.03)
-                let ew = s * 0.055, eh = s * 0.070 * eyeOpen
                 ctx.setFillColor(accent.withAlphaComponent(0.95).cgColor)
-                ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
+                let ew = s * 0.055, eh = s * 0.038
+                ctx.fillEllipse(in: CGRect(x: p.x - ew, y: p.y - eh, width: ew * 2, height: eh * 2))
                 ctx.setFillColor(bodyColor.cgColor)
-                ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.28, y: e.y - eh * 0.45, width: ew * 0.56, height: eh * 0.90))
-                ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.55, width: ew * 2.2, height: eh * 1.1))
+                ctx.fillEllipse(in: CGRect(x: p.x - ew * 0.35, y: p.y - eh * 0.8, width: ew * 0.7, height: eh * 1.6))
             }
-        } else {
-            frontFace(hcx, hcy, hw, hh)
+        }
+        switch state {
+        case .idle, .startle:
+            strokeAccents(KiddyCatTraced.standAccents)
+            let ff = KiddyCatTraced.standFace
+            frontFace(-ff.0, ff.1, ff.2, ff.2 * 0.88)
+        case .sit, .groom:
+            strokeAccents(KiddyCatTraced.sitAccents)
+            let ff = KiddyCatTraced.sitFace
+            frontFace(-ff.0, ff.1, ff.2, ff.2 * 0.88)
+        case .lie:
+            strokeAccents(KiddyCatTraced.loafAccents)
+            let ff = KiddyCatTraced.loafFace
+            frontFace(-ff.0, ff.1, ff.2, ff.2 * 0.88, sleepy: true)
+        case .play:
+            fillProps(KiddyCatTraced.playProps)
+            profileEye(KiddyCatTraced.playEye, closed: false)
+        case .eat:
+            fillProps(KiddyCatTraced.eatProps)
+            strokeAccents(KiddyCatTraced.eatAccents)
+            profileEye(KiddyCatTraced.eatEye, closed: true)
+        default:
+            break
         }
         ctx.setAlpha(1)
     }

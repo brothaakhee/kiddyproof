@@ -660,6 +660,16 @@ final class KiddyCat {
             if state == .pounceAir, blend >= 0.6 {
                 return (KiddyCatTraced.leap, KiddyCatTraced.leapScale, nil, [])
             }
+            // Locomotion: ping-pong between the two traced walk keyframes
+            // (reach ↔ passing), phase-locked to the planted-feet gait clock.
+            if state == .walk || state == .trot, blend >= 1, abs(speed) > 1 {
+                let ph = gaitPhase.truncatingRemainder(dividingBy: 1)
+                let tt = ph < 0.5 ? ph * 2 : 2 - ph * 2
+                let pts = zip(KiddyCatTraced.walkA, KiddyCatTraced.walkB).map {
+                    ($0.0 + ($1.0 - $0.0) * tt, $0.1 + ($1.1 - $0.1) * tt)
+                }
+                return (pts, KiddyCatTraced.walkScale, nil, [])
+            }
             guard blend >= 1, abs(speed) < 1, stateTime > 0.9 else { return nil }
             switch state {
             case .sit:  return (KiddyCatTraced.sit, KiddyCatTraced.sitScale, KiddyCatTraced.sitFace, KiddyCatTraced.sitAccents)

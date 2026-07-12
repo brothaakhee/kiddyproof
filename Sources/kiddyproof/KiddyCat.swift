@@ -276,7 +276,7 @@ final class KiddyCat {
                 let n = tail.count
                 for i in 1..<n {
                     let t = CGFloat(i) / CGFloat(n - 1)
-                    let tx = pos.x + facing * size * (-0.60 - 0.26 * sin(.pi * t) + 0.18 * t)
+                    let tx = pos.x + facing * size * (-0.58 - 0.34 * sin(.pi * t) + 0.30 * t * t)
                     let ty = groundY + size * (0.86 + 1.28 * t)
                     let k = settle * min(1, dt * 9)
                     let dx = (tx - tail[i].x) * k, dy = (ty - tail[i].y) * k
@@ -567,7 +567,7 @@ final class KiddyCat {
         // Anchor geometry.
         let stretch = pose.bodyStretch
         let shoulderX: CGFloat = 0.52 + stretch * 0.25 - pose.sitFold * 0.3
-        let rumpX: CGFloat = -(0.74 + stretch * 0.2 - pose.sitFold * 0.10)
+        let rumpX: CGFloat = -(0.78 + stretch * 0.2 - pose.sitFold * 0.10)
         let shoulderY = pose.shoulderHeight
         let rumpY = pose.rumpHeight
         let headX = pose.headForward + stretch * 0.2

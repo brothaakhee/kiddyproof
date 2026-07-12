@@ -743,7 +743,7 @@ final class KiddyCat {
                 let e = CGMutablePath()
                 let baseIn  = (hcx + side * hw * 0.16, hcy + hh * 0.80)
                 let baseOut = (hcx + side * hw * 0.94, hcy + hh * 0.28)
-                let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.34 + pose.earPerk * 0.20))
+                let tip     = (hcx + side * hw * (0.92 + cant), hcy + hh * (1.24 + pose.earPerk * 0.18))
                 e.move(to: P(baseIn.0, baseIn.1))
                 e.addLine(to: P(tip.0, tip.1))
                 e.addQuadCurve(to: P(baseOut.0, baseOut.1),
@@ -764,7 +764,7 @@ final class KiddyCat {
         // Sitting: haunch mass over the folded rear, blended into the outline.
         if sit > 0.15 {
             let hx = P(rumpX + 0.16, rumpY * 0.45)
-            let hr = s * 0.38 * sit
+            let hr = s * 0.44 * sit
             ctx.fillEllipse(in: CGRect(x: hx.x - hr, y: hx.y - hr * 0.95, width: hr * 2, height: hr * 1.9))
         }
 

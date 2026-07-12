@@ -620,7 +620,7 @@ final class KiddyCat {
             ctx.fillPath()
             // Paw: a soft rounded oval, slightly forward.
             let pw = s * 0.115
-            let pp = P(footX + 0.055, footY + 0.045)
+            let pp = P(footX + 0.04, footY + 0.04)
             ctx.fillEllipse(in: CGRect(x: pp.x - pw, y: pp.y - pw * 0.72, width: pw * 2, height: pw * 1.44))
         }
         drawLeg(front: true, far: true)
@@ -740,7 +740,7 @@ final class KiddyCat {
         ctx.setStrokeColor(accent.withAlphaComponent(0.85).cgColor)
         ctx.setLineWidth(s * 0.017)
         for side: CGFloat in [-1, 1] {
-            for (dy, len) in [(CGFloat(0.02), CGFloat(0.34)), (CGFloat(-0.05), CGFloat(0.38)), (CGFloat(-0.12), CGFloat(0.33))] {
+            for (dy, len) in [(CGFloat(0.02), CGFloat(0.26)), (CGFloat(-0.05), CGFloat(0.30)), (CGFloat(-0.12), CGFloat(0.25))] {
                 ctx.beginPath()
                 ctx.move(to: P(hcx + side * hw * 0.55, hcy + fy - 0.10 + dy * 0.5))
                 ctx.addLine(to: P(hcx + side * (hw * 0.55 + len), hcy + fy - 0.10 + dy))
@@ -764,6 +764,8 @@ final class KiddyCat {
                 ctx.fillEllipse(in: CGRect(x: e.x - ew, y: e.y - eh, width: ew * 2, height: eh * 2))
                 ctx.setFillColor(bodyColor.cgColor)
                 ctx.fillEllipse(in: CGRect(x: e.x - ew * 0.30, y: e.y - eh * 0.48, width: ew * 0.60, height: eh * 0.96))
+                // Upper lid: flatten the eye top for the reference's calm gaze.
+                ctx.fillEllipse(in: CGRect(x: e.x - ew * 1.1, y: e.y + eh * 0.58, width: ew * 2.2, height: eh * 1.2))
             }
         }
         // Nose: a tiny light triangle, point down.

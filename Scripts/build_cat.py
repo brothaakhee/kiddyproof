@@ -50,29 +50,35 @@ def cyl(name, frm, to, r):
     ob.rotation_euler = (0, theta, phi)
     return ob
 
+# Real cat proportions: elongated slender torso (length ≈ 2× depth), a
+# visible neck, a small wedge head (~1/5 body length), long slim legs
+# (~half the standing height), muscular hind thighs, and a long thin tail.
 parts = []
-parts.append(sphere("body", (-0.02, 0, 0.62), (0.52, 0.26, 0.30)))
-parts.append(sphere("chest", (0.30, 0, 0.64), (0.24, 0.22, 0.26)))
-parts.append(sphere("haunch", (-0.38, 0, 0.60), (0.28, 0.26, 0.30)))
-parts.append(sphere("head", (0.60, 0, 1.02), (0.23, 0.21, 0.21)))
-parts.append(sphere("muzzle", (0.78, 0, 0.94), (0.09, 0.10, 0.07)))
-parts.append(cone("ear.L", (0.54, 0.115, 1.27), 0.10, 0.26, (math.radians(-12), math.radians(8), 0)))
-parts.append(cone("ear.R", (0.54, -0.115, 1.27), 0.10, 0.26, (math.radians(12), math.radians(8), 0)))
-# legs: sturdy columns with paw spheres (thin ones get swallowed by the remesh)
-for (tag, lx) in (("front", 0.32), ("hind", -0.36)):
-    for (side, ly) in (("L", 0.14), ("R", -0.14)):
-        parts.append(cyl(f"leg_{tag}.{side}", (lx, ly, 0.62), (lx, ly, 0.05), 0.075))
-        parts.append(sphere(f"paw_{tag}.{side}", (lx + 0.02, ly, 0.05), (0.095, 0.08, 0.055)))
-# tail: segmented column heading back and up, posed by bones later
-TAIL_PTS = [(-0.58, 0, 0.72), (-0.80, 0, 0.86), (-0.92, 0, 1.06),
-            (-0.95, 0, 1.26), (-0.92, 0, 1.44)]
+parts.append(sphere("chest", (0.36, 0, 0.72), (0.21, 0.185, 0.215)))
+parts.append(sphere("body", (-0.02, 0, 0.70), (0.36, 0.175, 0.195)))
+parts.append(sphere("haunch", (-0.44, 0, 0.68), (0.23, 0.19, 0.235)))
+parts.append(cyl("neckcol", (0.46, 0, 0.82), (0.62, 0, 1.00), 0.095))
+parts.append(sphere("head", (0.68, 0, 1.06), (0.155, 0.140, 0.135)))
+parts.append(sphere("muzzle", (0.80, 0, 1.00), (0.075, 0.072, 0.055)))
+parts.append(cone("ear.L", (0.64, 0.082, 1.235), 0.068, 0.175, (math.radians(-10), math.radians(8), 0)))
+parts.append(cone("ear.R", (0.64, -0.082, 1.235), 0.068, 0.175, (math.radians(10), math.radians(8), 0)))
+# legs: long slim columns; hind pair gets a thigh mass
+for (tag, lx) in (("front", 0.38), ("hind", -0.42)):
+    for (side, ly) in (("L", 0.105), ("R", -0.105)):
+        parts.append(cyl(f"leg_{tag}.{side}", (lx, ly, 0.70), (lx, ly, 0.04), 0.048))
+        parts.append(sphere(f"paw_{tag}.{side}", (lx + 0.015, ly, 0.045), (0.062, 0.052, 0.042)))
+        if tag == "hind":
+            parts.append(sphere(f"thigh.{side}", (lx, ly * 1.05, 0.52), (0.115, 0.075, 0.175)))
+# tail: long, slim, tapering; posed by bones later
+TAIL_PTS = [(-0.64, 0, 0.74), (-0.84, 0, 0.92), (-0.94, 0, 1.14),
+            (-0.94, 0, 1.34), (-0.88, 0, 1.50)]
 for i in range(len(TAIL_PTS) - 1):
-    r = 0.065 - i * 0.006
+    r = 0.042 - i * 0.003
     parts.append(cyl(f"tailseg{i}", TAIL_PTS[i], TAIL_PTS[i + 1], r))
     # ball joints between segments keep the remesh from pinching at the kinks
     parts.append(sphere(f"tailjoint{i}", TAIL_PTS[i + 1],
-                        (0.062 - i * 0.006,) * 3, segments=12))
-parts.append(sphere("tailtip", TAIL_PTS[-1], (0.055, 0.055, 0.065)))
+                        (0.040 - i * 0.003,) * 3, segments=12))
+parts.append(sphere("tailtip", TAIL_PTS[-1], (0.036, 0.036, 0.044)))
 
 for ob in parts:
     bpy.ops.object.select_all(action='DESELECT')
@@ -91,7 +97,7 @@ cat.name = "Kiddy"
 # weld the primitives into one smooth organic surface
 rm = cat.modifiers.new("remesh", 'REMESH')
 rm.mode = 'VOXEL'
-rm.voxel_size = 0.032
+rm.voxel_size = 0.022   # fine enough to keep the slim legs and tail crisp
 rm.use_smooth_shade = True
 bpy.ops.object.modifier_apply(modifier="remesh")
 sub = cat.modifiers.new("subsurf", 'SUBSURF')
@@ -103,8 +109,8 @@ bpy.ops.object.shade_smooth()
 mat = bpy.data.materials.new("coat")
 mat.use_nodes = True
 bsdf = mat.node_tree.nodes["Principled BSDF"]
-bsdf.inputs["Base Color"].default_value = (0.10, 0.095, 0.11, 1)
-bsdf.inputs["Roughness"].default_value = 0.55
+bsdf.inputs["Base Color"].default_value = (0.155, 0.148, 0.165, 1)
+bsdf.inputs["Roughness"].default_value = 0.72   # soft matte coat, not plastic
 cat.data.materials.append(mat)
 
 # eyes + nose: small bone-parented spheres (skinned with the head)
@@ -119,9 +125,9 @@ def accessory(name, loc, scale, color):
     bpy.ops.object.shade_smooth()
     return ob
 
-eyeL = accessory("eye.L", (0.745, 0.09, 1.07), (0.032, 0.028, 0.042), (0.82, 0.86, 0.72, 1))
-eyeR = accessory("eye.R", (0.745, -0.09, 1.07), (0.032, 0.028, 0.042), (0.82, 0.86, 0.72, 1))
-nose = accessory("nose", (0.865, 0, 0.965), (0.026, 0.028, 0.018), (0.75, 0.45, 0.48, 1))
+eyeL = accessory("eye.L", (0.775, 0.066, 1.095), (0.024, 0.021, 0.032), (0.82, 0.86, 0.72, 1))
+eyeR = accessory("eye.R", (0.775, -0.066, 1.095), (0.024, 0.021, 0.032), (0.82, 0.86, 0.72, 1))
+nose = accessory("nose", (0.872, 0, 1.005), (0.020, 0.022, 0.014), (0.75, 0.45, 0.48, 1))
 
 # ------------------------------------------------------------------ armature
 bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
@@ -131,8 +137,8 @@ arm = arm_ob.data
 eb = arm.edit_bones
 eb[0].name = "root"
 root = eb["root"]
-root.head = (-0.28, 0, 0.62)
-root.tail = (0.02, 0, 0.66)
+root.head = (-0.34, 0, 0.68)
+root.tail = (0.0, 0, 0.72)
 
 def bone(name, head, tail, parent, connected=False):
     b = eb.new(name)
@@ -142,15 +148,15 @@ def bone(name, head, tail, parent, connected=False):
     b.use_connect = connected
     return b
 
-bone("chest", (0.02, 0, 0.66), (0.34, 0, 0.68), "root", True)
-bone("neck", (0.34, 0, 0.68), (0.52, 0, 0.94), "chest", True)
-bone("head", (0.52, 0, 0.94), (0.84, 0, 1.10), "neck", True)
+bone("chest", (0.0, 0, 0.72), (0.40, 0, 0.74), "root", True)
+bone("neck", (0.46, 0, 0.82), (0.62, 0, 1.00), "chest")
+bone("head", (0.62, 0, 1.00), (0.90, 0, 1.10), "neck", True)
 for side, sy in (("L", 1), ("R", -1)):
-    bone(f"leg_front_upper.{side}", (0.32, 0.14 * sy, 0.62), (0.32, 0.14 * sy, 0.32), "chest")
-    bone(f"leg_front_lower.{side}", (0.32, 0.14 * sy, 0.32), (0.34, 0.14 * sy, 0.03),
+    bone(f"leg_front_upper.{side}", (0.38, 0.105 * sy, 0.70), (0.38, 0.105 * sy, 0.36), "chest")
+    bone(f"leg_front_lower.{side}", (0.38, 0.105 * sy, 0.36), (0.40, 0.105 * sy, 0.03),
          f"leg_front_upper.{side}", True)
-    bone(f"leg_hind_upper.{side}", (-0.36, 0.14 * sy, 0.58), (-0.36, 0.14 * sy, 0.30), "root")
-    bone(f"leg_hind_lower.{side}", (-0.36, 0.14 * sy, 0.30), (-0.34, 0.14 * sy, 0.03),
+    bone(f"leg_hind_upper.{side}", (-0.42, 0.105 * sy, 0.66), (-0.42, 0.105 * sy, 0.34), "root")
+    bone(f"leg_hind_lower.{side}", (-0.42, 0.105 * sy, 0.34), (-0.40, 0.105 * sy, 0.03),
          f"leg_hind_upper.{side}", True)
 prev = "root"
 for i in range(len(TAIL_PTS) - 1):
@@ -194,6 +200,7 @@ def key_all(frame):
     for pb in P:
         pb.keyframe_insert("location", frame=frame)
         pb.keyframe_insert("rotation_euler", frame=frame)
+        pb.keyframe_insert("scale", frame=frame)
 
 def pose(name, pitch=0.0, sway=0.0, worldz=0.0, worldx=0.0):
     pb = P[name]
@@ -207,6 +214,18 @@ def pose(name, pitch=0.0, sway=0.0, worldz=0.0, worldx=0.0):
         pb.location = off
 
 # The neutral standing S-tail carriage, reused by most clips.
+# Feedback grounding: after posing, measure the LOWEST paw tip in world space
+# and re-drop the root so it touches the ground — forward-kinematics
+# dead-reckoning across a pitched spine chain is too error-prone by hand.
+def ground_root(pitch=0.0, clearance=0.015):
+    bpy.context.view_layer.update()
+    low = min((arm_ob.matrix_world @ P[f"leg_{t}_lower.{s}"].tail).z
+              for t in ("front", "hind") for s in "LR")
+    cur = P["root"].location.copy()
+    M = P["root"].bone.matrix_local.to_3x3().to_4x4()
+    delta = M.inverted() @ mathutils.Vector((0, 0, -(low - clearance)))
+    P["root"].location = cur + delta
+
 # The mesh's rest tail IS the raised brand S — the carriage only adds life.
 def tail_carriage(sway=0.0):
     pose("tail0", pitch=3, sway=sway * 10)
@@ -271,20 +290,23 @@ new_action("Sit", 96)
 for f in range(1, 97, 12):
     t = (f - 1) / 95 * 2 * math.pi
     clear_pose()
-    pose("root", pitch=28, worldz=-0.24)
-    pose("chest", pitch=12 + 0.6 * math.sin(t * 2))
+    # Grounded at the PELVIS (haunch bottom touches at drop -0.43); hind legs
+    # fold flat and shrink-tuck under the rump; front legs stay planted.
+    pose("root", pitch=16, worldz=-0.43)
+    pose("chest", pitch=8 + 0.6 * math.sin(t * 2))
     pose("neck", pitch=6)
-    pose("head", pitch=-12 + 1.5 * math.sin(t * 2 + 1))
+    pose("head", pitch=-2 + 1.5 * math.sin(t * 2 + 1))
     for side in "LR":
-        # thighs fold forward, shins fold back beneath; front legs stay planted
         pose(f"leg_hind_upper.{side}", pitch=-64)
         pose(f"leg_hind_lower.{side}", pitch=58)
-        pose(f"leg_front_upper.{side}", pitch=-30)
-        pose(f"leg_front_lower.{side}", pitch=-4)
-    pose("tail0", pitch=-30, sway=8)
-    pose("tail1", pitch=-26, sway=20)
-    pose("tail2", pitch=-10, sway=30)
-    pose("tail3", pitch=6, sway=24)
+        for seg in ("upper", "lower"):
+            P[f"leg_hind_{seg}.{side}"].scale = (0.75, 0.75, 0.75)
+        pose(f"leg_front_upper.{side}", pitch=-18)
+        pose(f"leg_front_lower.{side}", pitch=-2)
+    pose("tail0", pitch=-34, sway=6)
+    pose("tail1", pitch=-20, sway=12)
+    pose("tail2", pitch=-6, sway=18)
+    pose("tail3", pitch=4, sway=14)
     key_all(f)
 
 # Lie: the loaf — dropped to the ground, all legs tucked, slow breath.
@@ -292,14 +314,19 @@ new_action("Lie", 96)
 for f in range(1, 97, 12):
     t = (f - 1) / 95 * 2 * math.pi
     clear_pose()
-    pose("root", worldz=-0.33 + 0.006 * math.sin(t * 2))
+    # ground the BODY (belly bottom ≈ z 0.505 at rest) — the paws are tucked
+    # up inside the silhouette, so paw-grounding doesn't apply here.
+    pose("root", worldz=-0.47 + 0.006 * math.sin(t * 2))
     for side in "LR":
-        pose(f"leg_hind_upper.{side}", pitch=-58)
-        pose(f"leg_hind_lower.{side}", pitch=64)
-        pose(f"leg_front_upper.{side}", pitch=52)
-        pose(f"leg_front_lower.{side}", pitch=-66)
-    pose("neck", pitch=-6)
-    pose("head", pitch=-4 + 1.2 * math.sin(t * 2))
+        pose(f"leg_hind_upper.{side}", pitch=-52)
+        pose(f"leg_hind_lower.{side}", pitch=60)
+        pose(f"leg_front_upper.{side}", pitch=48)
+        pose(f"leg_front_lower.{side}", pitch=-62)
+        for seg in ("upper", "lower"):
+            P[f"leg_hind_{seg}.{side}"].scale = (0.35, 0.35, 0.35)
+            P[f"leg_front_{seg}.{side}"].scale = (0.35, 0.35, 0.35)
+    pose("neck", pitch=16)
+    pose("head", pitch=4 + 1.2 * math.sin(t * 2))
     pose("tail0", pitch=-18, sway=26)
     pose("tail1", pitch=-8, sway=36)
     pose("tail2", pitch=4, sway=36)

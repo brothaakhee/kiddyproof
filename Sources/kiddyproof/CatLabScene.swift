@@ -82,21 +82,31 @@ final class CatLabScene: Scene {
             return
         }
 
-        // --- Laser-driven behavior ---
+        // --- Laser-driven behavior: an energetic kitten ---
         let toLaser = laser.x - cat.pos.x
         let laserDist = abs(toLaser)
         let laserMoved = sqrt(hypot2(laser - lastLaser))
         lastLaser = laser
         laserStill = laserMoved < 3 ? laserStill + Double(ctx.dt) : 0
-        let laserNear = laserDist < ctx.bounds.width * 0.4 && laser.y < cat.groundY + 320
+        let laserNear = laserDist < ctx.bounds.width * 0.5 && laser.y < cat.groundY + 420
+
+        // Where is the dot relative to her? Drives the caught-it reaction:
+        // overhead → rear up and paw; under her → crouch and peer down;
+        // otherwise she's got it → roll over and bat at it.
+        func reactionState() -> KiddyCat.State {
+            if laser.y > cat.groundY + cat.size * 1.7 { return .sitUp }
+            if laserDist < cat.size * 0.9,
+               laser.y < cat.groundY + cat.size * 0.45 { return .peer }
+            return .rollPaw
+        }
 
         switch cat.state {
-        case .idle, .sit, .groom, .stretch, .lie, .walk, .trot, .play, .eat:
+        case .idle, .sit, .groom, .stretch, .lie, .walk, .play, .eat:
             cat.interest = laserNear ? laser : nil
             if laserNear, laserMoved > 6 {
-                // A moving dot is irresistible.
+                // A moving dot is irresistible — CHASE, flat out.
                 cat.face(toLaser)
-                cat.set(state: laserDist > 420 ? .trot : .stalk)
+                cat.set(state: laserDist > 260 ? .trot : .stalk)
             } else if now >= nextIdleChange {
                 // Autonomous life: amble, rest, groom, stretch.
                 let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot, .play, .eat]
@@ -107,16 +117,46 @@ final class CatLabScene: Scene {
                 if pick != cat.state { cat.set(state: pick) }
                 nextIdleChange = now + Double(rng.range(2.2, 5.5))
             }
+        case .trot:
+            cat.interest = laser
+            cat.face(toLaser)
+            // Arriving fast → throw the anchors out and slide.
+            if laserDist < abs(cat.speed) * 0.30, abs(cat.speed) > cat.size * 3 {
+                cat.set(state: .skid)
+            } else if laserDist < 150 {
+                cat.set(state: .stalk)
+            } else if !laserNear {
+                cat.set(state: .idle)
+            }
+        case .skid:
+            cat.interest = laser
+            // Slide finished → react to where the dot ended up.
+            if abs(cat.speed) < 25 { cat.set(state: reactionState()) }
         case .stalk:
             cat.interest = laser
             cat.face(toLaser)
             if !laserNear {
                 cat.set(state: .idle)
+            } else if laserDist < cat.size * 1.2, laserStill > 0.15 {
+                cat.set(state: reactionState())
             } else if laserDist < 190, laserStill > 0.25 {
                 let x = max(ctx.bounds.minX + cat.size * 2, min(ctx.bounds.maxX - cat.size * 2, laser.x))
                 cat.pounce(at: NSPoint(x: x, y: cat.groundY))
-            } else if laserDist > 500 {
+            } else if laserDist > 320 {
                 cat.set(state: .trot)
+            }
+        case .sitUp, .rollPaw, .peer:
+            cat.interest = laser
+            if !laserNear || laserDist > 260 {
+                // The dot escaped — chase again (or lose interest entirely).
+                cat.face(toLaser)
+                cat.set(state: laserNear ? .trot : .idle)
+            } else if laserMoved > 6, laserDist > cat.size * 1.4 {
+                cat.face(toLaser)
+                cat.set(state: .stalk)
+            } else if cat.state != reactionState(), laserStill > 0.6 {
+                // The dot drifted (up/under/level) — re-read the situation.
+                cat.set(state: reactionState())
             }
         case .pounceWindup, .pounceAir, .land, .startle:
             cat.interest = laser

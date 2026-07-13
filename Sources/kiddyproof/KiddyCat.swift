@@ -22,7 +22,7 @@ final class KiddyCat {
     private lazy var renderer3D = KiddyCat3D()
 
     enum State: String {
-        case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle, play, eat
+        case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle, play, eat, skid, sitUp, rollPaw, peer
     }
 
     // MARK: Public surface
@@ -73,9 +73,9 @@ final class KiddyCat {
         stateTime = 0
         blend = 0
         switch newState {
-        case .walk: targetSpeed = size * 1.3      // calm, catlike amble
-        case .trot: targetSpeed = size * 3.0
-        case .stalk: targetSpeed = size * 1.1
+        case .walk: targetSpeed = size * 2.0      // busy kitten amble
+        case .trot: targetSpeed = size * 5.5      // full dash
+        case .stalk: targetSpeed = size * 1.6
         case .pounceWindup: targetSpeed = 0
         case .pounceAir: break
         default: targetSpeed = 0
@@ -123,7 +123,7 @@ final class KiddyCat {
         earFlick = max(0, earFlick - dt * 5)
 
         // Locomotion.
-        let accel: CGFloat = size * 6
+        let accel: CGFloat = size * 11   // kitten-snappy starts and skids
         let want = targetSpeed * facing
         if speed < want { speed = min(want, speed + accel * dt) }
         if speed > want { speed = max(want, speed - accel * dt) }
@@ -238,6 +238,7 @@ final class KiddyCat {
     private func tailMood() -> (liftBias: CGFloat, sway: CGFloat) {
         switch state {
         case .stalk, .pounceWindup: return (-0.25, 2.6)   // low, twitchy
+        case .skid, .sitUp, .rollPaw, .peer: return (0.8, 1.4)
         case .walk, .trot: return (0.74, 0.9)             // raised, soft S
         case .startle: return (1.1, 0)                    // bottle-brush up
         case .pounceAir: return (1.0, 0)                  // carried up-back in flight
@@ -349,7 +350,9 @@ final class KiddyCat {
         case .lie:            return KiddyCatTraced.loaf
         case .stretch, .play: return KiddyCatTraced.play
         case .eat:            return KiddyCatTraced.eat
-        case .stalk, .pounceWindup, .land: return KiddyCatTraced.prowl
+        case .stalk, .pounceWindup, .land, .skid, .peer: return KiddyCatTraced.prowl
+        case .sitUp: return KiddyCatTraced.sit
+        case .rollPaw: return KiddyCatTraced.loaf
         case .pounceAir:      return KiddyCatTraced.leap
         case .walk, .trot:
             // Ping-pong between the two walk keyframes, locked to the gait clock.
@@ -452,6 +455,27 @@ final class KiddyCat {
             p.headHeight = 1.18
             p.frontLegBend = -0.5      // reaching
             p.rearLegBend = -0.6
+        case .skid:
+            p.crouch = 0.35
+            p.headHeight = 1.0
+            p.headForward = 1.1
+            p.earPerk = 1
+        case .sitUp:
+            p.sitFold = 1
+            p.rumpHeight = 0.5
+            p.shoulderHeight = 1.3
+            p.headHeight = 1.5
+            p.earPerk = 1
+        case .rollPaw:
+            p.shoulderHeight = 0.5
+            p.rumpHeight = 0.5
+            p.headHeight = 0.7
+            p.crouch = 0.6
+        case .peer:
+            p.crouch = 0.6
+            p.headHeight = 0.5
+            p.headForward = 1.0
+            p.earPerk = 1
         case .play:
             // Batting crouch: chest low over the toy, head down watching it.
             p.crouch = 0.45

@@ -449,6 +449,95 @@ for f in range(1, 21, 4):
     pose("tail1", pitch=12)
     key_all(f)
 
+# Skid: braking slide — forepaws thrust forward and shuffling, rump high,
+# weight back, tail flung up. Plays while ground speed bleeds off.
+new_action("Skid", 12)
+for f in range(1, 13):
+    t = (f - 1) / 12 * 2 * math.pi
+    clear_pose()
+    pose("root", pitch=8, worldz=-0.10 * spine_z)
+    pose("chest", pitch=-6)
+    pose("neck", pitch=10)
+    pose("head", pitch=6)
+    shuffle = math.sin(t * 3)
+    for side, sgn in (("L", 1), ("R", -1)):
+        pose(f"leg_front_upper.{side}", pitch=-34 + 7 * shuffle * sgn)
+        pose(f"leg_front_lower.{side}", pitch=6 - 4 * shuffle * sgn)
+        pose(f"leg_hind_upper.{side}", pitch=-26 - 5 * shuffle * sgn)
+        pose(f"leg_hind_lower.{side}", pitch=30)
+    pose("tail0", pitch=16)
+    pose("tail1", pitch=10, sway=6 * shuffle)
+    pose("tail2", pitch=4, sway=10 * shuffle)
+    key_all(f)
+
+# Sit_Up: rear onto the haunches and paw upward at something overhead.
+new_action("Sit_Up", 48)
+for f in range(1, 49, 3):
+    t = (f - 1) / 47 * 2 * math.pi
+    clear_pose()
+    pose("root", pitch=34, worldz=-0.52 * spine_z)
+    pose("chest", pitch=22)
+    pose("neck", pitch=16)
+    pose("head", pitch=12 + 2 * math.sin(t * 2))
+    paw = math.sin(t * 2)
+    pose("leg_front_upper.L", pitch=-88 - 16 * max(0.0, paw))
+    pose("leg_front_lower.L", pitch=-24 + 10 * max(0.0, paw))
+    pose("leg_front_upper.R", pitch=-88 - 16 * max(0.0, -paw))
+    pose("leg_front_lower.R", pitch=-24 + 10 * max(0.0, -paw))
+    for side in "LR":
+        pose(f"leg_hind_upper.{side}", pitch=-64)
+        pose(f"leg_hind_lower.{side}", pitch=58)
+        for seg in ("upper", "lower"):
+            P[f"leg_hind_{seg}.{side}"].scale = (0.75, 0.75, 0.75)
+    pose("tail0", pitch=-14, sway=8 * math.sin(t))
+    pose("tail1", pitch=-8, sway=12 * math.sin(t))
+    key_all(f)
+
+# Roll: flop onto the side and paw at the caught thing, tail sweeping.
+new_action("Roll", 60)
+for f in range(1, 61, 3):
+    t = (f - 1) / 59 * 2 * math.pi
+    clear_pose()
+    # roll onto the side but keep the face toward the camera: the head
+    # counter-rotates against the body roll.
+    pose("root", sway=46 + 3 * math.sin(t), worldz=-(spine_z - 0.26), pitch=4)
+    pose("chest", sway=8)
+    pose("neck", pitch=-4, sway=-22)
+    pose("head", pitch=-2 + 3 * math.sin(t * 2), sway=-20)
+    paw = math.sin(t * 2)
+    pose("leg_front_upper.L", pitch=-62 - 14 * max(0.0, paw))
+    pose("leg_front_lower.L", pitch=-16 + 10 * max(0.0, paw))
+    pose("leg_front_upper.R", pitch=-62 - 14 * max(0.0, -paw))
+    pose("leg_front_lower.R", pitch=-16 + 10 * max(0.0, -paw))
+    kick = math.sin(t * 2 + 1.2)
+    for side, sgn in (("L", 1), ("R", -1)):
+        pose(f"leg_hind_upper.{side}", pitch=-34 - 8 * kick * sgn)
+        pose(f"leg_hind_lower.{side}", pitch=28)
+    pose("tail0", pitch=-10, sway=20 * math.sin(t * 1.3))
+    pose("tail1", sway=26 * math.sin(t * 1.3 + 0.5))
+    pose("tail2", sway=26 * math.sin(t * 1.3 + 1.0))
+    key_all(f)
+
+# Peer: crouched low, nose pointed down between the forepaws, head
+# tilting curiously at something underneath her.
+new_action("Peer", 48)
+for f in range(1, 49, 3):
+    t = (f - 1) / 47 * 2 * math.pi
+    clear_pose()
+    pose("root", worldz=-0.26 * spine_z, pitch=2)
+    pose("chest", pitch=-6)
+    pose("neck", pitch=-24)
+    pose("head", pitch=-22 + 2 * math.sin(t * 2), sway=9 * math.sin(t))
+    for side in "LR":
+        pose(f"leg_front_upper.{side}", pitch=-8)
+        pose(f"leg_front_lower.{side}", pitch=12)
+        pose(f"leg_hind_upper.{side}", pitch=-24)
+        pose(f"leg_hind_lower.{side}", pitch=28)
+    pose("tail0", pitch=8)
+    pose("tail2", sway=14 * math.sin(t * 1.6))
+    pose("tail3", sway=18 * math.sin(t * 1.6 + 0.6))
+    key_all(f)
+
 arm_ob.animation_data.action = None
 for name, act in actions.items():
     track = arm_ob.animation_data.nla_tracks.new()

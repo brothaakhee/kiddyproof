@@ -188,6 +188,10 @@ final class KiddyCat3D {
         case .pounceAir, .startle: return "Jump_Loop"
         case .eat: return "Idle_Eating"
         case .play: return "Headbutt"
+        case .skid: return "Skid"
+        case .sitUp: return "Sit_Up"
+        case .rollPaw: return "Roll"
+        case .peer: return "Peer"
         default: return "Idle"
         }
     }

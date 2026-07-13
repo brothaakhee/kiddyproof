@@ -63,7 +63,8 @@ final class CatLabScene: Scene {
             switch ProcessInfo.processInfo.environment["KP_CATSTYLE"] {
             case "arcade": c.style = .arcade
             case "pixel": c.style = .pixel
-            default: break
+            case "silhouette": break
+            default: c.style = .model3d   // the lab's current default under evaluation
             }
             cat = c
         }

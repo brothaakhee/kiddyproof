@@ -9,6 +9,10 @@ let package = Package(
         // packaged .app whose Info.plist carries SUFeedURL (see Scripts/package.sh);
         // plain `swift run` development builds skip Sparkle entirely.
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
+        // glTF/GLB loader bridging into SceneKit — used for the animated 3D cat.
+        // Source-built (no binary artifacts), pinned to master: the last tagged
+        // release predates modern Swift.
+        .package(url: "https://github.com/magicien/GLTFSceneKit", branch: "master"),
     ],
     targets: [
         // Pure, UI-free logic shared by both executables — and unit-testable: settings
@@ -25,8 +29,13 @@ let package = Package(
             dependencies: [
                 "KiddyproofCore",
                 .product(name: "Sparkle", package: "Sparkle"),
+                .product(name: "GLTFSceneKit", package: "GLTFSceneKit"),
             ],
-            path: "Sources/kiddyproof"
+            path: "Sources/kiddyproof",
+            resources: [
+                // Quaternius animated cat (Public Domain / CC0, poly.pizza).
+                .copy("Resources/cat.glb"),
+            ]
         ),
         // A separate, tap-free helper process. Because it never installs a tap it can
         // never be wedged by Secure Event Input / TCC revocation / tap timeout, so it is

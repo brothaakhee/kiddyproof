@@ -15,8 +15,11 @@ final class KiddyCat {
 
     // Two looks, one brain: the elegant silhouette and the chunky arcade mascot
     // share the same skeleton, gait, tail physics, and behavior states.
-    enum Style { case silhouette, arcade, pixel }
+    enum Style { case silhouette, arcade, pixel, model3d }
     var style: Style = .silhouette
+
+    // The 3D skin (Quaternius animated cat via SceneKit); created on demand.
+    private lazy var renderer3D = KiddyCat3D()
 
     enum State: String {
         case idle, sit, groom, stretch, lie, walk, trot, stalk, pounceWindup, pounceAir, land, startle, play, eat
@@ -177,6 +180,9 @@ final class KiddyCat {
 
         updateTail(dt: dt)
         updateMorph(dt: dt)
+        if style == .model3d {
+            renderer3D?.update(dt: dt, state: state, speed: speed, facing: facing)
+        }
     }
 
     private func headWorldX() -> CGFloat { pos.x + facing * size * 1.05 }
@@ -513,6 +519,10 @@ final class KiddyCat {
     // MARK: Draw
 
     func draw(into ctx: CGContext, origin: CGPoint, inkW w: CGFloat) {
+        if style == .model3d, let r3d = renderer3D {
+            r3d.draw(into: ctx, origin: origin, pos: pos, groundY: groundY, size: size, now: now)
+            return
+        }
         if style == .pixel { drawPixel(into: ctx, origin: origin); return }
         if style == .arcade { drawArcade(into: ctx, origin: origin, inkW: w); return }
         drawSilhouette(into: ctx, origin: origin, inkW: w)

@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "gltfscenekit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/magicien/GLTFSceneKit",
+      "state" : {
+        "branch" : "master",
+        "revision" : "a9587ec5c6515ee7d036533fdd909815a9a718ef"
+      }
+    },
+    {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",

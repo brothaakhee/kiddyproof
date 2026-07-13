@@ -23,7 +23,10 @@ scn = bpy.context.scene
 scn.render.fps = FPS
 
 # ------------------------------------------------------------------- import
-bpy.ops.import_scene.gltf(filepath=IN_GLB)
+if IN_GLB.lower().endswith(".fbx"):
+    bpy.ops.import_scene.fbx(filepath=IN_GLB)
+else:
+    bpy.ops.import_scene.gltf(filepath=IN_GLB)
 meshes = [o for o in bpy.data.objects if o.type == 'MESH']
 bpy.ops.object.select_all(action='DESELECT')
 for o in meshes:
@@ -68,10 +71,32 @@ for img in bpy.data.images:
         img.scale(limit, limit)
 
 # ---------------------------------------------------------------- normalize
-# This Meshy export: body along Y with the head at -Y, Z up (the raised tail
-# is the topmost point — don't mistake it for ears). Rotate +90° about Z so
-# the head lands at +X. Canonical frame: +X forward, ground z=0, height 1.30.
-cat.data.transform(mathutils.Matrix.Rotation(math.radians(90), 4, 'Z'))
+# Generated models arrive at arbitrary yaw (Meshy: head at -Y; the chibi
+# kitten: ~45°). Auto-align: PCA of the horizontal vertex spread gives the
+# body axis; rotate it onto X. Then pick the head end as the end with the
+# DENSER mass up high (a head+ears is chunky; a raised tail is a thin tube).
+raw = [v.co.copy() for v in cat.data.vertices]
+n = len(raw)
+mx = sum(v.x for v in raw) / n
+my = sum(v.y for v in raw) / n
+sxx = sum((v.x - mx) ** 2 for v in raw) / n
+syy = sum((v.y - my) ** 2 for v in raw) / n
+sxy = sum((v.x - mx) * (v.y - my) for v in raw) / n
+theta = 0.5 * math.atan2(2 * sxy, sxx - syy)
+cat.data.transform(mathutils.Matrix.Rotation(-theta, 4, 'Z'))
+vs0 = [v.co.copy() for v in cat.data.vertices]
+zlo = min(v.z for v in vs0)
+zhi = max(v.z for v in vs0)
+xlo = min(v.x for v in vs0)
+xhi = max(v.x for v in vs0)
+zcut = zlo + 0.55 * (zhi - zlo)
+span = xhi - xlo
+front_mass = sum(1 for v in vs0 if v.z > zcut and v.x > xhi - 0.35 * span)
+rear_mass = sum(1 for v in vs0 if v.z > zcut and v.x < xlo + 0.35 * span)
+if rear_mass > front_mass:
+    cat.data.transform(mathutils.Matrix.Rotation(math.pi, 4, 'Z'))
+print(f"ORIENT theta={math.degrees(theta):.1f}deg head_mass f={front_mass} r={rear_mass} "
+      f"flipped={rear_mass > front_mass}")
 
 def verts():
     return [v.co.copy() for v in cat.data.vertices]
@@ -147,6 +172,9 @@ else:
                 (xh - 0.5, 0, spine_z + 0.3), (xh - 0.5, 0, spine_z + 0.5),
                 (xh - 0.45, 0, spine_z + 0.65)]
 
+# Legs begin at the belly line, not at spine height — a leg bone that
+# passes through the torso drags body mass when the leg folds.
+leg_top = max(belly_z + 0.06, 0.5 * spine_z)
 print(f"LANDMARKS xf={xf:.2f} xh={xh:.2f} yf={yspread_f:.2f} yh={yspread_h:.2f} "
       f"spine_z={spine_z:.2f} belly_z={belly_z:.2f} head_cz={head_cz:.2f} nose_x={nose_x:.2f} "
       f"tail={['%.2f,%.2f' % (p[0], p[2]) for p in TAIL_PTS]}")
@@ -173,14 +201,15 @@ neck_base = (xf + 0.06, 0, spine_z + 0.10)
 bone("chest", (0.0, 0, spine_z + 0.02), (xf + 0.02, 0, spine_z + 0.04), "root", True)
 bone("neck", neck_base, (xf + 0.16, 0, head_cz - 0.06), "chest")
 bone("head", (xf + 0.16, 0, head_cz - 0.06), (nose_x - 0.02, 0, head_cz + 0.02), "neck", True)
+knee = leg_top * 0.52
 for side, sy in (("L", 1), ("R", -1)):
-    bone(f"leg_front_upper.{side}", (xf, yspread_f * sy, spine_z),
-         (xf, yspread_f * sy, spine_z * 0.48), "chest")
-    bone(f"leg_front_lower.{side}", (xf, yspread_f * sy, spine_z * 0.48),
+    bone(f"leg_front_upper.{side}", (xf, yspread_f * sy, leg_top),
+         (xf, yspread_f * sy, knee), "chest")
+    bone(f"leg_front_lower.{side}", (xf, yspread_f * sy, knee),
          (xf + 0.02, yspread_f * sy, 0.03), f"leg_front_upper.{side}", True)
-    bone(f"leg_hind_upper.{side}", (xh, yspread_h * sy, spine_z),
-         (xh, yspread_h * sy, spine_z * 0.48), "root")
-    bone(f"leg_hind_lower.{side}", (xh, yspread_h * sy, spine_z * 0.48),
+    bone(f"leg_hind_upper.{side}", (xh, yspread_h * sy, leg_top),
+         (xh, yspread_h * sy, knee), "root")
+    bone(f"leg_hind_lower.{side}", (xh, yspread_h * sy, knee),
          (xh + 0.02, yspread_h * sy, 0.03), f"leg_hind_upper.{side}", True)
 prev = "root"
 for i in range(len(TAIL_PTS) - 1):
@@ -235,7 +264,7 @@ for v in cat.data.vertices:
 # Identical authoring to Scripts/build_cat.py (world-space rest-conjugated
 # posing), with grounding drops derived from the measured geometry.
 P = arm_ob.pose.bones
-PELVIS_DROP = -(spine_z - 0.24)        # sit: rump near the ground
+PELVIS_DROP = -0.55 * spine_z          # sit: pelvis to ~45% hip height
 # The patch-soup interior makes the belly unmeasurable directly; the body
 # radius is ~0.24 around the spine line, so ground contact ≈ spine - 0.26.
 BELLY_DROP = -(spine_z - 0.20)

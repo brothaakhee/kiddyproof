@@ -34,7 +34,14 @@ final class KiddyCat3D {
     private func yawTarget(_ facing: CGFloat) -> CGFloat { facing >= 0 ? 0 : .pi }
 
     init?() {
-        guard let url = Bundle.module.url(forResource: "cat", withExtension: "glb") else {
+        // KP_CATMODEL overrides the bundled model — any rigged .glb from
+        // Scripts/rig_cat.py drops in (useful for A/B-ing candidate cats).
+        let url: URL
+        if let custom = ProcessInfo.processInfo.environment["KP_CATMODEL"] {
+            url = URL(fileURLWithPath: custom)
+        } else if let bundled = Bundle.module.url(forResource: "cat", withExtension: "glb") {
+            url = bundled
+        } else {
             NSLog("KiddyCat3D: cat.glb missing from bundle")
             return nil
         }

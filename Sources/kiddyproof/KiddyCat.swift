@@ -73,8 +73,8 @@ final class KiddyCat {
         stateTime = 0
         blend = 0
         switch newState {
-        case .walk: targetSpeed = size * 2.2
-        case .trot: targetSpeed = size * 4.4
+        case .walk: targetSpeed = size * 1.3      // calm, catlike amble
+        case .trot: targetSpeed = size * 3.0
         case .stalk: targetSpeed = size * 1.1
         case .pounceWindup: targetSpeed = 0
         case .pounceAir: break
@@ -181,7 +181,7 @@ final class KiddyCat {
         updateTail(dt: dt)
         updateMorph(dt: dt)
         if style == .model3d {
-            renderer3D?.update(dt: dt, state: state, speed: speed, facing: facing)
+            renderer3D?.update(dt: dt, state: state, speed: speed, facing: facing, size: size)
         }
     }
 

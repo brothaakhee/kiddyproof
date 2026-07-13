@@ -54,16 +54,18 @@ for mat in cat.data.materials:
     bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
     if not bsdf:
         continue
-    for inp_name in ("Metallic", "Roughness", "Normal", "Specular IOR Level"):
+    for inp_name in ("Metallic", "Specular IOR Level", "Roughness"):
         inp = bsdf.inputs.get(inp_name)
         if inp:
             for link in list(inp.links):
                 mat.node_tree.links.remove(link)
     bsdf.inputs["Metallic"].default_value = 0.0
-    bsdf.inputs["Roughness"].default_value = 0.65
+    bsdf.inputs["Roughness"].default_value = 0.88   # soft fur, not vinyl
 for img in bpy.data.images:
-    if img.size[0] > 1024:
-        img.scale(1024, 1024)
+    # keep fur detail: base color at 2048, data maps at 1024
+    limit = 2048 if "base" in img.name.lower() or "color" in img.name.lower() else 1024
+    if img.size[0] > limit:
+        img.scale(limit, limit)
 
 # ---------------------------------------------------------------- normalize
 # This Meshy export: body along Y with the head at -Y, Z up (the raised tail
@@ -135,6 +137,11 @@ if len(tailv) > 40:
         TAIL_PTS.append((robust_mean([v.x for v in seg]),
                          robust_mean([v.y for v in seg]),
                          robust_mean([v.z for v in seg])))
+    # smooth the chain: quantile centroids zigzag on a curled tail
+    for _ in range(2):
+        for i in range(1, 4):
+            TAIL_PTS[i] = tuple((TAIL_PTS[i - 1][k] + 2 * TAIL_PTS[i][k]
+                                 + TAIL_PTS[i + 1][k]) / 4 for k in range(3))
 else:
     TAIL_PTS = [(xh - 0.2, 0, spine_z), (xh - 0.4, 0, spine_z + 0.1),
                 (xh - 0.5, 0, spine_z + 0.3), (xh - 0.5, 0, spine_z + 0.5),
@@ -284,17 +291,21 @@ for f in range(1, 97, 8):
     key_all(f)
 
 new_action("Walk", 24)
-for f in range(1, 25, 2):
+for f in range(1, 25):
     t = (f - 1) / 24 * 2 * math.pi
     clear_pose()
     for name, ph in (("leg_front_upper.L", 0), ("leg_front_upper.R", math.pi),
                      ("leg_hind_upper.L", math.pi * 0.9), ("leg_hind_upper.R", math.pi * 1.9)):
         s = math.sin(t + ph)
-        pose(name, pitch=26 * s)
-        pose(name.replace("upper", "lower"), pitch=-max(0.0, 30 * math.sin(t + ph + math.pi / 3)))
-    pose("root", worldz=0.012 * math.sin(t * 2))
-    pose("head", pitch=3)
-    tail_carriage(sway=0.5 * math.sin(t))
+        swing = max(0.0, math.sin(t + ph + math.pi / 2.6))
+        pose(name, pitch=24 * s)
+        # stance leg stays straight and planted; swing leg flexes to clear
+        pose(name.replace("upper", "lower"), pitch=-42 * swing ** 2)
+    pose("root", worldz=0.010 * math.sin(t * 2), sway=2.0 * math.sin(t))
+    pose("chest", sway=-1.4 * math.sin(t))
+    pose("neck", pitch=2)
+    pose("head", pitch=1.5 + 1.2 * math.sin(t * 2 + 0.6))
+    tail_carriage(sway=0.35 * math.sin(t - 0.8))
     key_all(f)
 
 new_action("Run", 14)
@@ -340,13 +351,14 @@ for f in range(1, 97, 12):
     clear_pose()
     pose("root", worldz=BELLY_DROP + 0.006 * math.sin(t * 2))
     for side in "LR":
-        pose(f"leg_hind_upper.{side}", pitch=-58)
-        pose(f"leg_hind_lower.{side}", pitch=66)
+        pose(f"leg_hind_upper.{side}", pitch=-48)
+        pose(f"leg_hind_lower.{side}", pitch=52)
         for seg in ("upper", "lower"):
-            P[f"leg_hind_{seg}.{side}"].scale = (0.6, 0.6, 0.6)
+            P[f"leg_hind_{seg}.{side}"].scale = (0.5, 0.5, 0.5)
         # sphinx forelegs: folded flat along the ground, paws forward
-        pose(f"leg_front_upper.{side}", pitch=-62)
-        pose(f"leg_front_lower.{side}", pitch=60)
+        pose(f"leg_front_upper.{side}", pitch=-54)
+        pose(f"leg_front_lower.{side}", pitch=48)
+        P[f"leg_front_lower.{side}"].scale = (0.7, 0.7, 0.7)
     pose("neck", pitch=16)
     pose("head", pitch=4 + 1.2 * math.sin(t * 2))
     pose("tail0", pitch=-20, sway=18)

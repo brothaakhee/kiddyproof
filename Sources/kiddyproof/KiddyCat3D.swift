@@ -186,9 +186,19 @@ final class KiddyCat3D {
     }
 
     // Advance clip cross-fades and facing; called from KiddyCat.update.
-    func update(dt: CGFloat, state: KiddyCat.State, speed: CGFloat, facing: CGFloat) {
+    func update(dt: CGFloat, state: KiddyCat.State, speed: CGFloat, facing: CGFloat,
+                size: CGFloat) {
         guard loaded else { return }
         switchClip(to: clip(for: state, speed: speed))
+        // Kill foot-slide: play locomotion clips at the rate the ground is
+        // actually passing. One authored Walk cycle advances ~0.48 model
+        // units; px-per-model-unit on screen is size × 2.2 (see draw()).
+        let unitsPerSecond = abs(speed) / (size * 2.2)
+        let walkRate = max(0.4, min(3.0, unitsPerSecond / 0.48))
+        clips["Walk"]?.forEach { $0.player.speed = walkRate }
+        // The Run clip is authored at 24/14 ≈ 1.7 cycles/s advancing ~0.8 units.
+        let runRate = max(0.5, min(3.0, unitsPerSecond / (0.8 * 1.7)))
+        clips["Run"]?.forEach { $0.player.speed = runRate }
         // Smooth turn: yaw eases toward the travel direction.
         let wantYaw = yawTarget(facing)
         yaw += (wantYaw - yaw) * min(1, dt * 8)

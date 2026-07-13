@@ -94,9 +94,11 @@ final class CatLabScene: Scene {
         // overhead → rear up and paw; under her → crouch and peer down;
         // otherwise she's got it → roll over and bat at it.
         func reactionState() -> KiddyCat.State {
-            if laser.y > cat.groundY + cat.size * 1.7 { return .sitUp }
+            // Generous look-up: anything above her head height reads as
+            // "overhead" — she should rear and reach, not stare down.
+            if laser.y > cat.groundY + cat.size * 1.1 { return .sitUp }
             if laserDist < cat.size * 0.9,
-               laser.y < cat.groundY + cat.size * 0.45 { return .peer }
+               laser.y < cat.groundY + cat.size * 0.35 { return .peer }
             return .rollPaw
         }
 

@@ -74,7 +74,7 @@ final class KiddyCat {
         blend = 0
         switch newState {
         case .walk: targetSpeed = size * 2.0      // busy kitten amble
-        case .trot: targetSpeed = size * 5.5      // full dash
+        case .trot: targetSpeed = size * 8.0      // flat-out sprint
         case .stalk: targetSpeed = size * 1.6
         case .pounceWindup: targetSpeed = 0
         case .pounceAir: break
@@ -123,7 +123,7 @@ final class KiddyCat {
         earFlick = max(0, earFlick - dt * 5)
 
         // Locomotion.
-        let accel: CGFloat = size * 11   // kitten-snappy starts and skids
+        let accel: CGFloat = size * 14   // kitten-snappy starts and skids
         let want = targetSpeed * facing
         if speed < want { speed = min(want, speed + accel * dt) }
         if speed > want { speed = max(want, speed - accel * dt) }

@@ -205,14 +205,18 @@ final class KiddyCat3D {
         // actually passing. One authored Walk cycle advances ~0.48 model
         // units; px-per-model-unit on screen is size × 2.2 (see draw()).
         let unitsPerSecond = abs(speed) / (size * 2.2)
-        let walkRate = max(0.4, min(3.0, unitsPerSecond / 0.48))
+        let walkRate = max(0.4, min(3.5, unitsPerSecond / 0.48))
         clips["Walk"]?.forEach { $0.player.speed = walkRate }
-        // The Run clip is authored at 24/14 ≈ 1.7 cycles/s advancing ~0.8 units.
-        let runRate = max(0.5, min(3.0, unitsPerSecond / (0.8 * 1.7)))
+        // The gallop is authored at 2 cycles/s advancing ~1.1 units per cycle.
+        let runRate = max(0.5, min(3.5, unitsPerSecond / 2.2))
         clips["Run"]?.forEach { $0.player.speed = runRate }
-        // Smooth turn: yaw eases toward the travel direction.
+        // Smooth turn: yaw eases toward the travel direction — but ground
+        // reactions (skid/roll/peer/sit-up) must lie flat in the running
+        // plane, so the turn completes fast before/while they play.
+        let grounded: Set<KiddyCat.State> = [.skid, .sitUp, .rollPaw, .peer]
+        let yawRate: CGFloat = grounded.contains(state) ? 22 : 8
         let wantYaw = yawTarget(facing)
-        yaw += (wantYaw - yaw) * min(1, dt * 8)
+        yaw += (wantYaw - yaw) * min(1, dt * yawRate)
         modelRoot.eulerAngles = SCNVector3(0, yaw, 0)
     }
 

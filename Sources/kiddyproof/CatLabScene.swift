@@ -105,10 +105,15 @@ final class CatLabScene: Scene {
         switch cat.state {
         case .idle, .sit, .groom, .stretch, .lie, .walk, .play, .eat:
             cat.interest = laserNear ? laser : nil
-            if laserNear, laserMoved > 6 {
+            if laserNear, laserDist < 130, laserMoved < 6 {
+                // The dot is RIGHT THERE — react to it, don't wander off.
+                // (This is also the post-pounce/land funnel back into play.)
+                cat.face(toLaser)
+                cat.set(state: reactionState())
+            } else if laserNear, laserMoved > 6 {
                 // A moving dot is irresistible — CHASE, flat out.
                 cat.face(toLaser)
-                cat.set(state: laserDist > 260 ? .trot : .stalk)
+                cat.set(state: laserDist > 160 ? .trot : .stalk)
             } else if now >= nextIdleChange {
                 // Autonomous life: amble, rest, groom, stretch.
                 let choices: [KiddyCat.State] = [.walk, .idle, .sit, .groom, .stretch, .lie, .walk, .trot, .play, .eat]
@@ -123,9 +128,9 @@ final class CatLabScene: Scene {
             cat.interest = laser
             cat.face(toLaser)
             // Arriving fast → throw the anchors out and slide.
-            if laserDist < abs(cat.speed) * 0.30, abs(cat.speed) > cat.size * 3 {
+            if laserDist < abs(cat.speed) * 0.30, abs(cat.speed) > cat.size * 2.5 {
                 cat.set(state: .skid)
-            } else if laserDist < 150 {
+            } else if laserDist < 120 {
                 cat.set(state: .stalk)
             } else if !laserNear {
                 cat.set(state: .idle)
@@ -139,24 +144,25 @@ final class CatLabScene: Scene {
             cat.face(toLaser)
             if !laserNear {
                 cat.set(state: .idle)
-            } else if laserDist < cat.size * 1.2, laserStill > 0.15 {
+            } else if laserDist < 120, laserStill > 0.1 {
+                // Close and stopped → react NOW; pouncing is for the mid ring.
                 cat.set(state: reactionState())
-            } else if laserDist < 190, laserStill > 0.25 {
+            } else if laserDist >= 120, laserDist < 190, laserStill > 0.3 {
                 let x = max(ctx.bounds.minX + cat.size * 2, min(ctx.bounds.maxX - cat.size * 2, laser.x))
                 cat.pounce(at: NSPoint(x: x, y: cat.groundY))
-            } else if laserDist > 320 {
+            } else if laserDist > 240 {
                 cat.set(state: .trot)
             }
         case .sitUp, .rollPaw, .peer:
             cat.interest = laser
-            if !laserNear || laserDist > 260 {
+            if !laserNear || laserDist > 300 {
                 // The dot escaped — chase again (or lose interest entirely).
                 cat.face(toLaser)
                 cat.set(state: laserNear ? .trot : .idle)
-            } else if laserMoved > 6, laserDist > cat.size * 1.4 {
+            } else if laserMoved > 8, laserDist > cat.size * 2.2 {
                 cat.face(toLaser)
                 cat.set(state: .stalk)
-            } else if cat.state != reactionState(), laserStill > 0.6 {
+            } else if cat.state != reactionState(), laserStill > 0.5 {
                 // The dot drifted (up/under/level) — re-read the situation.
                 cat.set(state: reactionState())
             }

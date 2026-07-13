@@ -205,10 +205,10 @@ final class KiddyCat3D {
         // actually passing. One authored Walk cycle advances ~0.48 model
         // units; px-per-model-unit on screen is size × 2.2 (see draw()).
         let unitsPerSecond = abs(speed) / (size * 2.2)
-        let walkRate = max(0.4, min(3.5, unitsPerSecond / 0.48))
+        let walkRate = max(0.4, min(4.0, unitsPerSecond / 0.48))
         clips["Walk"]?.forEach { $0.player.speed = walkRate }
         // The gallop is authored at 2 cycles/s advancing ~1.1 units per cycle.
-        let runRate = max(0.5, min(3.5, unitsPerSecond / 2.2))
+        let runRate = max(0.5, min(4.5, unitsPerSecond / 2.2))
         clips["Run"]?.forEach { $0.player.speed = runRate }
         // Smooth turn: yaw eases toward the travel direction — but ground
         // reactions (skid/roll/peer/sit-up) must lie flat in the running

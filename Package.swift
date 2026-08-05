@@ -22,12 +22,22 @@ let package = Package(
             name: "KiddyproofCore",
             path: "Sources/KiddyproofCore"
         ),
+        // The auxin-canalisation plant simulation, ported from
+        // github.com/aj-dev-smith/canalisation. Pure Foundation/simd with no UI and no
+        // AppKit, so the whole developmental model — margin patterning, blade
+        // canalisation, phyllotaxis — is unit-testable headlessly against the
+        // reference implementation's own test harnesses.
+        .target(
+            name: "CanalSim",
+            path: "Sources/CanalSim"
+        ),
         // The main agent app: owns the suppressing event tap, the overlay, effects,
         // cursor control, secure-input guard and the exit gesture.
         .executableTarget(
             name: "kiddyproof",
             dependencies: [
                 "KiddyproofCore",
+                "CanalSim",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "GLTFSceneKit", package: "GLTFSceneKit"),
             ],
@@ -35,6 +45,11 @@ let package = Package(
             resources: [
                 // Quaternius animated cat (Public Domain / CC0, poly.pizza).
                 .copy("Resources/cat.glb"),
+                // Shading for the canalisation plant. Copied rather than compiled
+                // into a metallib: CanalRenderer builds it at launch, so there is
+                // one source of truth and no dependence on how SwiftPM chooses to
+                // treat a .metal file inside an executable target.
+                .copy("Resources/CanalShaders.metal"),
             ]
         ),
         // A separate, tap-free helper process. Because it never installs a tap it can
@@ -50,6 +65,14 @@ let package = Package(
             name: "KiddyproofCoreTests",
             dependencies: ["KiddyproofCore"],
             path: "Tests/KiddyproofCoreTests"
+        ),
+        // Fidelity tests for the canalisation port: the structures the model is
+        // supposed to produce (teeth from convergence points, a vein hierarchy,
+        // reproducibility from a seed) checked against the reference's own numbers.
+        .testTarget(
+            name: "CanalSimTests",
+            dependencies: ["CanalSim"],
+            path: "Tests/CanalSimTests"
         ),
     ]
 )

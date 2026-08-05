@@ -70,6 +70,24 @@ final class Director {
 
     var isTransitioning: Bool { incoming != nil }
 
+    // The 3D scene draws through Metal rather than the shared CGContext, so the
+    // overlay has to drive it separately. Non-nil for as long as it is on screen
+    // at all, including while it is fading in or draining out.
+    var activeMetalScene: CanalScene? {
+        if let inc = incoming as? CanalScene { return inc }
+        return current as? CanalScene
+    }
+
+    // How opaque the Metal layer should be this frame. The crossfade composites
+    // Core Graphics scenes through a transparency layer, which a sibling layer
+    // cannot join — so the Metal layer fades on its own opacity instead, on the
+    // same curve, and the two halves of a transition stay in step.
+    var metalOpacity: Float {
+        guard incoming != nil else { return 1 }
+        // fading IN if the incoming scene is the Metal one, out if it is leaving
+        return Float(activeMetalScene === incoming ? fadeProgress : 1 - fadeProgress)
+    }
+
     func requestNext(now: TimeInterval) {
         guard incoming == nil else { return }   // ignore during transition
         // Next allowed scene after the current index (wrapping), skipping disallowed

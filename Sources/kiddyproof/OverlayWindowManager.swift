@@ -43,7 +43,18 @@ final class OverlayWindowManager: NSObject {
         CalmDriftScene(), CalmConstellationScene(), CalmRipplesScene(), CalmPetalsScene(),
         CalmGravitationalScene(), CalmSpiderwebScene(), CalmPuzzleScene(),
         KaleidoscopeScene(), GardenScene(), MusicBoxScene(), CatLabScene(),
-    ])
+    ] + Self.metalScenes())
+
+    // Bloom renders through Metal. If this machine cannot give us a device or the
+    // shader will not compile, the scene is simply never offered — better than
+    // putting a blank scene in a child's rotation.
+    private static func metalScenes() -> [Scene] {
+        if let why = CanalRenderer.unavailableReason {
+            NSLog("[kiddyproof] Bloom unavailable, skipping it: \(why)")
+            return []
+        }
+        return [CanalScene()]
+    }
     // Optional slow-motion for inspecting a scene in the isolation harness (KP_SLOMO).
     private let slomo: CGFloat = {
         if let s = ProcessInfo.processInfo.environment["KP_SLOMO"], let v = Double(s), v > 0 { return CGFloat(v) }
@@ -238,7 +249,20 @@ final class OverlayWindowManager: NSObject {
         orb.update(center: orbCenter, cursor: cursor, taps: taps, dt: CGFloat(dt), now: now)
         maybeShuffle(now: now)
 
-        for v in views { v.needsDisplay = true }
+        // The 3D scene renders itself, once per panel, straight into that panel's
+        // Metal layer. Everything else in the overlay is Core Graphics and is
+        // composited above it by the content layer.
+        let metalScene = director.activeMetalScene
+        let metalAlpha = director.metalOpacity
+        let veil = director.veil
+        for v in views {
+            v.setVeil(veil)
+            v.setMetalActive(metalScene != nil, opacity: metalAlpha)
+            if let s = metalScene, let ml = v.metalLayer {
+                s.renderMetal(into: ml, bounds: v.bounds)
+            }
+            v.markContentDirty()
+        }
     }
 
     // Exit hint visibility: full for ~4s after arming, then fades to keep the screen pure;
@@ -283,7 +307,7 @@ final class OverlayWindowManager: NSObject {
     // Read-only draw of the current stepped state, called by each EffectsView.
     // Dev aid: KP_TESTBG=white|gray|black paints a solid backdrop so effect contrast can
     // be checked against extreme backgrounds without fighting window management.
-    private static let testBG: CGColor? = {
+    static let testBG: CGColor? = {
         switch ProcessInfo.processInfo.environment["KP_TESTBG"] {
         case "white": return NSColor.white.cgColor
         case "gray": return NSColor(white: 0.55, alpha: 1).cgColor
@@ -301,15 +325,8 @@ final class OverlayWindowManager: NSObject {
 
     fileprivate func render(into ctx: CGContext, bounds: CGRect, origin: CGPoint) {
         let now = CACurrentMediaTime()
-        if let bg = Self.testBG { ctx.setBlendMode(.normal); ctx.setFillColor(bg); ctx.fill(bounds) }
-        // The ONLY background: a light translucent dusk so glows read on any wallpaper.
-        // The parent's real screen stays visible through it (the core premise).
-        let veil = director.veil
-        if veil > 0.01 {
-            ctx.setBlendMode(.normal)
-            ctx.setFillColor(NSColor(white: 0, alpha: veil).cgColor)
-            ctx.fill(bounds)
-        }
+        // The dev backdrop and the dusk veil are both LAYERS below this context now
+        // (see EffectsView) — painting them here would cover the Metal scene.
         director.draw(into: ctx, bounds: bounds, origin: origin, now: now)
         cursorFX.draw(into: ctx, origin: origin, skin: director.skin, now: now)
         if orb.enabled { orb.draw(into: ctx, origin: origin, now: now) }
@@ -361,14 +378,118 @@ final class OverlayWindowManager: NSObject {
     }
 }
 
+// Draws the overlay's Core Graphics content into a layer that sits ABOVE the
+// Metal layer, so a 3D scene can never cover the cursor, the scene orb or the
+// exit hint — all of which are safety- or usability-critical furniture.
+private final class ContentLayerDelegate: NSObject, CALayerDelegate {
+    weak var view: EffectsView?
+    func draw(_ layer: CALayer, in ctx: CGContext) {
+        guard let v = view else { return }
+        v.manager?.render(into: ctx, bounds: v.bounds, origin: v.screenOrigin)
+    }
+    // This redraws every frame; implicit animations would smear one frame into the
+    // next and turn the whole overlay into a motion blur.
+    func action(for layer: CALayer, forKey event: String) -> CAAction? { NSNull() }
+}
+
 final class EffectsView: NSView {
     weak var manager: OverlayWindowManager?
     var screenOrigin: NSPoint = .zero
     override var isFlipped: Bool { false }   // bottom-left origin to match screen coords
 
-    override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        manager?.render(into: ctx, bounds: bounds, origin: screenOrigin)
+    // The 3D scene's target. Hidden — and costing nothing — for every scene that
+    // draws through Core Graphics, which is all of them but Bloom.
+    private(set) var metalLayer: CAMetalLayer?
+    private var contentLayer: CALayer?
+    private var veilLayer: CALayer?
+    private let contentDelegate = ContentLayerDelegate()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        contentDelegate.view = self
+        wantsLayer = true
+        // Layer-HOSTING, not merely layer-backed: a view's own drawRect paints
+        // BENEATH its sublayers, which is the wrong side of the Metal layer.
+        let root = CALayer()
+        layer = root
+
+        // The dev backdrop (KP_TESTBG) and the dusk veil both belong UNDER the
+        // Metal layer: painted in the Core Graphics content above it they would
+        // cover the 3D scene completely rather than sit behind it.
+        if let bg = OverlayWindowManager.testBG { root.backgroundColor = bg }
+        let vl = CALayer()
+        vl.backgroundColor = NSColor.black.cgColor
+        vl.opacity = 0
+        root.addSublayer(vl)
+        veilLayer = vl
+
+        let ml = CAMetalLayer()
+        ml.pixelFormat = .bgra8Unorm
+        ml.framebufferOnly = true
+        ml.isOpaque = false
+        ml.isHidden = true
+        if let dev = CanalRenderer.sharedMetalDevice { ml.device = dev }
+        root.addSublayer(ml)
+        metalLayer = ml
+
+        let cl = CALayer()
+        cl.delegate = contentDelegate
+        root.addSublayer(cl)
+        contentLayer = cl
+        layoutLayers()
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unused") }
+
+    override func layout() {
+        super.layout()
+        layoutLayers()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        layoutLayers()
+    }
+
+    private func layoutLayers() {
+        let scale = window?.backingScaleFactor ?? 2
+        let b = bounds
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer?.frame = b
+        contentLayer?.frame = b
+        contentLayer?.contentsScale = scale
+        veilLayer?.frame = b
+        metalLayer?.frame = b
+        metalLayer?.contentsScale = scale
+        metalLayer?.drawableSize = CGSize(width: max(1, b.width * scale),
+                                          height: max(1, b.height * scale))
+        CATransaction.commit()
+    }
+
+    // Called once per frame by the manager in place of setNeedsDisplay on the view.
+    func markContentDirty() { contentLayer?.setNeedsDisplay() }
+
+    // The only background this app ever draws: a light translucent dusk so glows
+    // read on any wallpaper. It is a layer rather than a fill so it can sit
+    // beneath the Metal scene; the parent's real screen stays visible through it.
+    func setVeil(_ v: CGFloat) {
+        guard let vl = veilLayer else { return }
+        let o = Float(max(0, min(1, v)))
+        guard vl.opacity != o else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        vl.opacity = o
+        CATransaction.commit()
+    }
+
+    func setMetalActive(_ on: Bool, opacity: Float) {
+        guard let ml = metalLayer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if ml.isHidden == on { ml.isHidden = !on }
+        if on && ml.opacity != opacity { ml.opacity = opacity }
+        CATransaction.commit()
     }
 
     // While the suppressing tap is healthy, NO input event can reach this view via the

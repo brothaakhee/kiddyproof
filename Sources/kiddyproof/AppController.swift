@@ -21,6 +21,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var savedPresentationOptions: NSApplication.PresentationOptions = []
 
     let settings = SettingsStore()
+    private let license = LicenseManager()
     private var demoMax: TimeInterval?   // demo-only watchdog backstop override
     private var settingsMenu: NSMenu?
 
@@ -194,6 +195,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(settingsItem)
         settingsMenu = sm
         menu.addItem(.separator())
+        let licenseStatus = NSMenuItem(title: license.statusLine, action: nil, keyEquivalent: "")
+        licenseStatus.isEnabled = false
+        menu.addItem(licenseStatus)
+        if case .licensed = license.entitlement {} else {
+            menu.addItem(NSMenuItem(title: "Enter License Key…", action: #selector(enterLicense), keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: "Buy kiddyproof…", action: #selector(buyLicense), keyEquivalent: ""))
+        }
+        menu.addItem(.separator())
         let status = NSMenuItem(title: accessibilityStatusLine(), action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
@@ -214,6 +223,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func menuEnter() { armKidMode() }
+    @objc private func enterLicense() {
+        if license.promptForLicense(reason: "Enter your kiddyproof license key.") {
+            setupStatusItem()   // rebuild so the menu reflects Licensed ✓
+        }
+    }
+    @objc private func buyLicense() { NSWorkspace.shared.open(LicenseManager.purchaseURL) }
     @objc private func openSettings() { Permissions.openAccessibilitySettings() }
     @objc private func showOnboarding() { onboarding.show() }
     @objc private func checkForUpdates() { UpdaterSupport.checkForUpdates() }
@@ -389,6 +404,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func armKidMode() {
         guard !state.isArmed() else { return }
+
+        // PAYWALL: kid mode is the product. Trial or license required to arm;
+        // everything else (menu, settings, onboarding) stays freely usable.
+        if case .expired = license.entitlement {
+            guard license.promptForLicense(
+                reason: "Your \(License.trialDays)-day free trial has ended. Kid mode needs a license to start.")
+            else { return }
+        }
 
         guard Permissions.isAccessibilityTrusted() else {
             alert(title: "Accessibility required",

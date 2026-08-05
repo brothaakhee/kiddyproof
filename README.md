@@ -6,9 +6,14 @@ the real desktop stays visible and untouched, **all** typing/clicking/scrolling 
 before it reaches any app, and the input instead drives playful visual feedback (click
 ripples, big flying letters, a black-hole cursor). Only a deliberate parent gesture exits.
 
-This repo is a **proof-of-concept** that validates the load-bearing mechanisms. The
-architecture was designed and adversarially stress-tested before any code was written (see
-`docs/ARCHITECTURE.md`).
+**Download:** [kiddyproof.app](https://kiddyproof.app) ·
+[Releases](https://github.com/brothaakhee/kiddyproof-releases/releases) —
+macOS 14 Sonoma+, Apple Silicon. 7-day free trial, then a one-time license.
+Developer-ID signed; auto-updates via Sparkle. This source repo is private;
+binaries ship from the public releases repo.
+
+The architecture was designed and adversarially stress-tested before any code was
+written (see `docs/ARCHITECTURE.md`).
 
 ## How it works (the real mechanism)
 
@@ -40,10 +45,26 @@ bottom-left corner for 3s**.
 ## Build, test, package
 ```
 swift build                      # debug build (app + watchdog)
-swift test                       # unit tests: settings clamping, watchdog protocol/enforcement, exit-gesture timing
+swift test                       # unit tests: settings clamping, watchdog protocol/enforcement, exit-gesture timing, licensing
 Scripts/package.sh               # release .app bundle + DMG (ad-hoc signed)
-SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=kiddyproof Scripts/package.sh   # ship
+SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=kiddyproof VERSION=1.0.0 Scripts/package.sh   # ship
 ```
+
+## Licensing (seller side)
+License keys are offline Ed25519 signatures verified in
+`Sources/KiddyproofCore/License.swift` — no server, no phone-home. The private
+key lives in `secrets/` (gitignored; **back it up**). Issue a customer key:
+```
+swift Scripts/make_license.swift issue customer@example.com
+```
+The app grants a 7-day trial from first launch; arming kid mode after that
+requires a key (menu bar → Enter License Key…).
+
+## Site & updates
+`site/` is the kiddyproof.app landing page + Sparkle appcast, deployed on
+Railway. Each release: build the DMG, attach it to a GitHub Release on
+`kiddyproof-releases`, add the `sign_update` enclosure line to
+`site/appcast.xml`, redeploy the site.
 
 ## Verified
 - ✅ Builds clean (app + watchdog). ✅ Unit tests pass (KiddyproofCore).

@@ -374,6 +374,21 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 .lights { display: flex; gap: 8px; }
 .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 .lights .r { background: #ff5f57; } .lights .y { background: #febc2e; } .lights .g { background: #28c840; }
+.lights i { cursor: pointer; transition: transform .15s ease, filter .15s ease; border: 0; padding: 0; }
+.lights i:hover { transform: scale(1.25); filter: brightness(1.15); }
+.lights i:active { transform: scale(0.9); }
+.window.shake { animation: kp-shake .45s cubic-bezier(.36,.07,.19,.97); }
+@keyframes kp-shake {
+  10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); } 40%, 60% { transform: translateX(5px); }
+}
+.window.boop { animation: kp-boop .4s ease; }
+@keyframes kp-boop { 30% { transform: scale(0.985) translateY(3px); } 100% { transform: none; } }
+.demo-toast { position: absolute; left: 50%; top: 52px; transform: translateX(-50%) translateY(-6px);
+  background: rgba(12,18,40,0.92); border: 1px solid rgba(156,224,255,0.35); color: #dfe7ff;
+  font-size: 13.5px; padding: 7px 14px; border-radius: 999px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; z-index: 5; }
+.demo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .titlebar .ttl {
   position: absolute; left: 0; right: 0; text-align: center;
   font-size: 13px; color: var(--ink-mute); font-weight: 500;
@@ -726,13 +741,14 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <div class="glow-bed"></div>
       <div class="window">
         <div class="titlebar">
-          <div class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+          <div class="lights"><i class="r" id="light-close" role="button" tabindex="0" aria-label="Try to close kid mode"></i><i class="y" id="light-min" role="button" tabindex="0" aria-label="Try to minimize kid mode"></i><i class="g" id="light-zoom" role="button" tabindex="0" aria-label="Release fireflies"></i></div>
           <span class="ttl">
             <svg class="shield" viewBox="0 0 24 24" fill="none" stroke="#9ce0ff" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5z"/></svg>
             kiddyproof — kid mode active
           </span>
           <span class="live-badge"><span class="d"></span> Live</span>
         </div>
+        <div class="demo-toast" id="demo-toast" aria-live="polite"></div>
         <div class="canvas-frame">
           <canvas id="demo" aria-hidden="true"></canvas>
         </div>
@@ -1268,6 +1284,38 @@ SCENES.forEach((s, i) => {
     drawDesktop();
     for (const o of orbs) drawOrb(o, 0.8);
   }
+
+  // ---- the traffic lights: kid mode playfully refuses to close ----
+  const windowEl = document.querySelector('.demo-stage .window');
+  const toastEl = document.getElementById('demo-toast');
+  let toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+  function jiggle(cls) {
+    windowEl.classList.remove('shake', 'boop');
+    void windowEl.offsetWidth;               // restart the animation
+    windowEl.classList.add(cls);
+  }
+  function centerBurst(n) {
+    shieldPulse = 1;
+    bloom(W / 2, H * 0.45);
+    for (let i = 0; i < n; i++) releaseFirefly(W * (0.3 + rnd() * 0.4), H * (0.25 + rnd() * 0.5));
+  }
+  const wire = (id, fn) => {
+    const el = document.getElementById(id);
+    el.addEventListener('click', fn);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+  };
+  wire('light-close', () => { jiggle('shake'); centerBurst(3);
+    toast("Nice try — kid mode only exits with the 3-second parent hold 😉"); });
+  wire('light-min', () => { jiggle('boop'); centerBurst(2);
+    toast("Can't minimize the cage — that's the whole point"); });
+  wire('light-zoom', () => { jiggle('boop'); centerBurst(9);
+    toast("Fireflies! (This one's just for fun)"); });
 
   // ---- let visitors interact too: pointer = cursor, click = bloom ----
   canvas.addEventListener('pointermove', (e) => {

@@ -16,14 +16,14 @@
         playful overlay while your work stays untouched. 10+ gentle scenes, a
         hardened safety watchdog, and a deliberate 3-second parent exit.</p>
       ]]></description>
-      <pubDate>Tue, 05 Aug 2026 00:09:00 +0000</pubDate>
-      <sparkle:version>202608050109</sparkle:version>
+      <pubDate>Mon, 24 Aug 2026 13:56:00 +0000</pubDate>
+      <sparkle:version>202608241356</sparkle:version>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <enclosure
         url="https://github.com/brothaakhee/kiddyproof-releases/releases/download/v1.0.0/kiddyproof-1.0.0.dmg"
-        sparkle:edSignature="yRa8hS218f9S25tUzSwWYmH49hZXYEHLnu1YNLaOE7brKZtXlM09T7E/PNA+n+vSSefWrrfXChrBXGA1IXDxDA=="
-        length="2772351"
+        sparkle:edSignature="q2It4Ya6sYc+hIJkn5X44HFD2YQApkGri1ffGQN/ZoCaZimP6uP1y2JEvt8+QqayaaL1mUkowKXsDAXENHxMAQ=="
+        length="2776627"
         type="application/octet-stream" />
     </item>
   </channel>

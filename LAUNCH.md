@@ -44,33 +44,24 @@ safety, and an honest "things we can't protect you from" list on the site.
 > untouched. A deliberate 3-second parent gesture exits. Signed, notarized, no
 > account, no cloud.
 
-**First comment (maker's comment — post immediately after launch):**
-> Hey Product Hunt 👋
+**First comment (maker's comment — post right after launch, in my own voice):**
+> hey everyone — i've got 2 little ones who are always attacking my computer,
+> and they hate it when i try to navigate away from whatever they're poking at
+> back to my actual work. so i built this thing.
 >
-> I built kiddyproof after handing my laptop to my toddler one too many times
-> and finding half an email deleted and three apps quit.
+> there are a few apps that kind of do this already, but what i like about
+> mine is that the screen mainly just stays looking the way you left it — slack
+> open, mid-message to your boss, all of it — while the kids can just go ham on
+> the keyboard and trackpad and none of it actually lands. one shortcut turns
+> it on, and getting out is a deliberate 3-second hold so they can't stumble
+> out of it.
 >
-> Every "kid mode" I found either took over the whole Mac with a password lock,
-> or was just an overlay you could click straight through. I wanted something
-> that (a) actually blocks input at the system level, (b) keeps my real desktop
-> visible so it never feels like a scary lockout, and (c) I could trust to hand
-> control back if anything ever went wrong.
+> it's mac only right now — haven't tried windows yet, but if enough people
+> want it i'll probably do it. signed + notarized, 7-day free trial then a
+> one-time license, no account or cloud stuff.
 >
-> So kiddyproof blocks every keystroke, click, and scroll before it reaches your
-> apps, paints a calm firefly/ripple/constellation world on top (never
-> overstimulating — that was a hard design rule), and exits only on a deliberate
-> 3-second parent gesture. A separate watchdog process guarantees you always get
-> control back. It's Developer-ID signed and Apple-notarized.
->
-> It's honest about its edges, too — there's a literal "things we can't protect
-> you from" list on the site (the power button, extremely clever children,
-> spilled juice…).
->
-> 7-day free trial, then a one-time license — no subscription, no account, no
-> cloud. macOS 14+, Apple Silicon.
->
-> I'd love your feedback, especially from other parents who work on a Mac. Happy
-> to answer anything about how the input-blocking works under the hood.
+> would love feedback, especially from other parents who work on a mac. happy
+> to get into how the input-blocking actually works too.
 
 **Gallery order:** 1) hero + tagline, 2) the live light-play demo, 3) the scene
 gallery (calm scenes), 4) the 3-second exit gesture, 5) "things we can't protect
@@ -85,38 +76,40 @@ few hours (no "upvote please" — PH penalizes that).
 
 ## Hacker News — Show HN
 
-**Title:** Show HN: kiddyproof – block your Mac's keyboard so a toddler can't wreck your work
+**Title:** Show HN: kiddyproof – let your toddler bash the Mac keyboard without wrecking your work
 
-**Text (first comment / post body):**
-> I'm a parent who works on a Mac, and handing it to my kid always ended with
-> deleted text and quit apps. macOS parental controls are about screen time, not
-> "let them bash the keyboard for two minutes without consequences."
+**Text (post body):**
+> i've got 2 little kids who are always grabbing at my laptop, and they hate it
+> when i navigate away from whatever they were poking at back to my real work.
+> so i built this.
 >
-> kiddyproof installs a suppressing CGEventTap (a session-level, head-insert
-> tap with kCGEventTapOptionDefault) that swallows keyboard and pointer events
-> before they reach any app. A transparent NSPanel at the shielding window level
-> renders calm visuals driven by a summary of the swallowed events. Exit is a
-> deliberate 3-second chord/corner hold — random mashing can't reproduce it.
+> the idea: one shortcut and the screen basically stays looking exactly how you
+> left it — slack open, half-written message and all — but every keystroke,
+> click and scroll gets swallowed before it reaches any app. the kids can go
+> ham and nothing actually lands. exit is a deliberate 3-second hold so they
+> can't stumble out.
 >
-> The part I cared most about is the failsafe: a separate, tap-free watchdog
-> process holds a heartbeat and SIGKILLs the main app on livelock or timeout, so
-> input is always restored even if the app itself wedges. It also refuses to arm
-> while Secure Event Input is held (password fields, FileVault) rather than
-> pretend it's protecting you, and it fail-loud disarms if the tap ever silently
-> dies.
+> under the hood it's a suppressing CGEventTap (session-level, head-insert,
+> kCGEventTapOptionDefault) that eats keyboard and pointer events; a transparent
+> shielding-level NSPanel paints the calm visuals on top. the part i cared most
+> about is the failsafe — a separate watchdog process holds a heartbeat and
+> SIGKILLs the app on any hang, so you always get control back. it also refuses
+> to arm while Secure Event Input is held (password fields, FileVault) instead
+> of pretending it's protecting you.
 >
-> Honest limits: it can't catch the hardware power button, a few OS-reserved
-> shortcuts (Force Quit), or multi-finger trackpad gestures — those sit below
-> where any non-root app can intercept. Not sandboxable, so it's a Developer-ID
+> honest limits: it can't catch the hardware power button, a couple OS-reserved
+> shortcuts, or multi-finger trackpad gestures — those live below where any
+> non-root app can intercept. it's not sandboxable, so it's a Developer-ID
 > signed + notarized direct download, not a Mac App Store app.
 >
-> Tech: Swift, CoreGraphics for the effects, no dependencies beyond Sparkle.
-> 7-day trial, one-time license, no account/telemetry. macOS 14+, Apple Silicon.
-> Site + download: https://kiddyproof.app — happy to go deep on the event-tap
-> and watchdog design in the comments.
+> it's mac only right now — haven't tried windows, but if there's enough
+> interest i'll probably build it. swift + coregraphics, no deps beyond sparkle.
+> 7-day trial, one-time license, no account or telemetry. macOS 14+, apple
+> silicon. https://kiddyproof.app — happy to go deep on the event-tap and
+> watchdog stuff in the comments.
 
-*(HN values technical honesty and hates marketing speak. Lead with the mechanism,
-disclose the limits up front, engage substantively.)*
+*(HN hates marketing speak — this leads with the personal reason and the
+mechanism, discloses limits up front. Engage substantively in replies.)*
 
 ---
 
@@ -126,21 +119,57 @@ Tailor per subreddit; never cross-post identical text. Post as a parent sharing
 a tool, not an ad. Read each sub's self-promo rules first.
 
 **r/macapps** (tool-friendly)
-Title: `kiddyproof — I made a Mac app that blocks the keyboard so my toddler can't wreck my work`
-Body: short origin story + what it does + honest limits + "7-day trial, one-time
-license, no account." Link. Offer a few free licenses to the first commenters
-who want to try it (great for goodwill + feedback).
+Title: `i built a mac app that lets my toddlers bash the keyboard without wrecking my work`
+Body:
+> hey all — i've got 2 little ones who are always attacking my laptop, and they
+> hate it when i try to navigate away from whatever they're poking at back to my
+> actual work. so i built this thing.
+>
+> there are a few apps that kind of do this already, but what i like about mine
+> is the screen mainly just stays looking the way you left it — slack open,
+> mid-message to your boss, all of it — while the kids go ham on the keyboard
+> and trackpad and none of it actually lands. one shortcut turns it on, getting
+> out is a deliberate 3-second hold.
+>
+> mac only right now (haven't tried windows — if enough people want it i
+> probably will). signed + notarized, 7-day free trial then a one-time license,
+> no account or cloud stuff. site's at kiddyproof.app.
+>
+> happy to hand out a few free licenses to anyone who wants to try it and tell
+> me what breaks.
 
-**r/parenting / r/workingmoms / r/daddit** (lead with the parenting problem, not the tech)
-Title: `I kept handing my laptop to my toddler and losing work — so I built a "kid mode" for the Mac`
-Body: the relatable moment, how it helps, that it's calm-by-design and never
-overstimulating. Mention it's a paid indie app up front (honesty) and that
-you'd love parent feedback.
+**r/parenting** (lead with the parenting moment)
+Title: `kept handing my laptop to my toddlers and losing work, so i made a "kid mode" for the mac`
+Body:
+> my two are always grabbing at my computer, and the second i try to get back to
+> my own work they lose it. i wanted something where they could just mash away
+> and i wouldn't have to worry about deleted emails or 15 apps quitting.
+>
+> so i made a little mac app: one shortcut and the whole keyboard/trackpad stops
+> reaching anything, the screen stays looking exactly like i left it, and the
+> kids get calm glowing stuff on top to poke at. calm on purpose — no flashing
+> or loud noises. getting out is a 3-second hold so they can't do it by accident.
+>
+> it's a paid indie app (7-day free trial, one-time license — no subscription).
+> mac only for now. would genuinely love feedback from other parents who work
+> from a laptop. it's at kiddyproof.app if you want a look.
 
-**r/SideProject / r/indiehackers** (the build story)
-Title: `Launched kiddyproof: a notarized macOS "toddler lock" — 7-day trial, one-time license`
-Body: the journey (input tap, watchdog, notarization, direct-download paywall),
-metrics if any, ask for feedback.
+**r/SideProject** (the build story)
+Title: `launched kiddyproof — a mac "toddler lock" that keeps your screen looking untouched`
+Body:
+> built this because my 2 kids kept attacking my laptop and wrecking my work.
+> one shortcut swallows all keyboard/trackpad input before it hits any app, but
+> the screen stays looking exactly how you left it (slack, half-typed message,
+> whatever) — kids just get calm light to play with on top. exit is a deliberate
+> 3-second hold.
+>
+> the fun/hard parts: a suppressing event tap for the input blocking, a separate
+> watchdog process that guarantees you always get control back, and getting it
+> Developer-ID signed + apple-notarized so it installs clean. sells direct with
+> an offline license-key system (no server). mac only right now; windows maybe
+> if there's interest.
+>
+> 7-day trial, one-time license. kiddyproof.app — feedback very welcome.
 
 ---
 
@@ -162,8 +191,8 @@ metrics if any, ask for feedback.
 | **r/apple, r/macOS** | Only if allowed | Check rules; often no self-promo |
 
 **Directory blurb (≤160 chars, reusable):**
-> Toddler-proof your Mac: one shortcut blocks the keyboard and trackpad behind a
-> calm light-play overlay while your work stays untouched. Signed & notarized.
+> a mac app that blocks the keyboard + trackpad so your kid can bash away
+> without wrecking your work — the screen stays looking exactly how you left it.
 
 ---
 

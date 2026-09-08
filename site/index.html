@@ -7,6 +7,12 @@
 <meta name="description" content="A native macOS app that turns your child's typing and clicking into calm, glowing light — while your real desktop stays untouched. One shortcut in, one parent gesture out." />
 
 <link rel="canonical" href="https://kiddyproof.app/" />
+
+<!-- Analytics: self-hosted Umami (privacy-first, no cookies). Custom events
+     for downloads, demo tries, and per-section reads are fired from the script
+     below. Time-on-page + visitors are tracked automatically. -->
+<script defer src="https://umami-production-c71b.up.railway.app/script.js"
+        data-website-id="4f9a7d9a-5c29-42a4-a347-41dc9a25a3ea"></script>
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="kiddyproof" />
 <meta property="og:title" content="kiddyproof — hand over the keyboard, keep your work" />
@@ -1019,6 +1025,33 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
 </div>
 
 <script>
+/* ============================================================
+   0. Analytics events (Umami) — downloads, demo tries, section reads.
+      Visitors + time-on-page are tracked automatically by the loader.
+   ============================================================ */
+(function () {
+  const track = (name, data) => { try { window.umami && window.umami.track(name, data); } catch (e) {} };
+  // Downloads: any link to the release DMG, plus the nav Download button.
+  document.querySelectorAll('a[href*="releases"], a[href*=".dmg"], a[href="#download"]').forEach(a => {
+    a.addEventListener('click', () => track('download', { where: a.closest('nav') ? 'nav' : 'body' }));
+  });
+  // Live demo: the "Try it here" button.
+  const tb = document.getElementById('try-btn');
+  if (tb) tb.addEventListener('click', () => track('demo-try'));
+  // Sections read: fire once when each major section first enters view.
+  const seen = new Set();
+  const secObs = new IntersectionObserver((ents) => {
+    ents.forEach(e => {
+      if (e.isIntersecting && !seen.has(e.target.id)) {
+        seen.add(e.target.id); track('read', { section: e.target.id });
+      }
+    });
+  }, { threshold: 0.4 });
+  ['how', 'effects', 'safety', 'demo-stage', 'download'].forEach(id => {
+    const el = document.getElementById(id); if (el) secObs.observe(el);
+  });
+})();
+
 /* ============================================================
    1. Nav scroll state + scroll reveals
    ============================================================ */

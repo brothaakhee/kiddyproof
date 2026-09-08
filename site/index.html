@@ -416,6 +416,63 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 }
 .demo-caption b { color: var(--ink-soft); font-weight: 600; }
 
+/* ---- Try it here (full-window black hole) ---- */
+.try-cta { text-align: center; margin-top: 26px; }
+.btn-try {
+  display: inline-flex; align-items: center; gap: 11px;
+  font-family: inherit; font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+  color: #0a0f1e; cursor: pointer; border: 0;
+  padding: 16px 30px; border-radius: 999px;
+  background: linear-gradient(135deg, #ffd27a, #ff9d6c 60%, #d98cff);
+  box-shadow: 0 10px 40px rgba(255,160,110,0.34), 0 0 0 1px rgba(255,255,255,0.15) inset;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, filter .18s ease;
+}
+.btn-try:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 54px rgba(255,160,110,0.46); filter: brightness(1.04); }
+.btn-try:active { transform: translateY(0) scale(0.99); }
+.btn-try svg { width: 20px; height: 20px; }
+.try-note { margin: 14px auto 0; max-width: 40rem; font-size: 13.5px; line-height: 1.6; color: var(--ink-mute); }
+.try-note b { color: var(--ink-soft); font-weight: 600; }
+
+/* ---- Full-window black-hole overlay ---- */
+#bh-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(ellipse at 50% 45%, #0a0e1c, #05060c 75%);
+  opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility .4s;
+}
+#bh-overlay.on { opacity: 1; visibility: visible; }
+#bh-canvas { display: block; width: 100%; height: 100%; cursor: none; touch-action: none; }
+.bh-hint {
+  position: fixed; top: 26px; left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 10px 18px; border-radius: 999px; z-index: 2;
+  background: rgba(10,15,30,0.6); border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: #dfe7ff; font-size: 13.5px; font-weight: 500;
+  opacity: 0; transition: opacity .5s ease .3s;
+  pointer-events: none; white-space: nowrap;
+}
+#bh-overlay.on .bh-hint { opacity: 1; }
+.bh-hint kbd {
+  font: inherit; font-weight: 700; font-size: 12px;
+  padding: 3px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+}
+.bh-hint .sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); }
+.bh-hint .tip { color: rgba(223,231,255,0.7); }
+.bh-close {
+  position: fixed; top: 20px; right: 24px; z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; color: #dfe7ff;
+  background: rgba(10,15,30,0.55); border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  opacity: 0; transition: opacity .5s ease .3s, transform .15s ease, background .15s ease;
+}
+#bh-overlay.on .bh-close { opacity: 1; }
+.bh-close:hover { background: rgba(255,255,255,0.14); transform: scale(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  #bh-overlay, .bh-hint, .bh-close { transition: none; }
+}
+
 /* ============================ SECTION PRIMITIVES ============================ */
 section { position: relative; }
 .sec { padding: 100px 0; }
@@ -757,6 +814,19 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
         <b>A faithful re-creation of the Drift scene</b>, running live in your browser — drifting fireflies, blooms on
         every tap, a cursor that gently gathers the light. The Mac behind it never feels a thing.
       </p>
+
+      <div class="try-cta">
+        <button class="btn-try" id="try-btn" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+          Try it here
+        </button>
+        <p class="try-note">
+          This is just one sample scene — the app ships with <b>a dozen more</b>, from constellations to
+          ripples to a music box. This one's the <b>Black&nbsp;Hole</b>: your cursor becomes a vacuum. It
+          takes over your whole browser window, exactly like kid mode takes over the Mac —
+          <b>press&nbsp;Esc anytime to come back</b>.
+        </p>
+      </div>
     </div>
   </div>
 </header>
@@ -931,6 +1001,19 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
 </footer>
 
 </div><!-- /wrap -->
+
+<!-- ===== Full-window Black Hole overlay (Try it here) ===== -->
+<div id="bh-overlay" role="dialog" aria-modal="true" aria-label="Black Hole scene — press Escape to exit">
+  <canvas id="bh-canvas"></canvas>
+  <div class="bh-hint">
+    <span>move to steer · <b>hold</b> to pull it all in · <b>any key</b> to blast out</span>
+    <span class="sep"></span>
+    <span class="tip">press <kbd>Esc</kbd> to exit</span>
+  </div>
+  <button class="bh-close" id="bh-close" type="button" aria-label="Exit (Esc)">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</div>
 
 <script>
 /* ============================================================
@@ -1360,6 +1443,209 @@ SCENES.forEach((s, i) => {
     vis.observe(canvas);
     start();
   }
+})();
+
+/* ============================================================
+   4. TRY IT HERE — the Black Hole scene, full browser window.
+      A faithful port of the app's CalmBlackholeScene: the cursor
+      is a vacuum (hold to crank suction ~100x and haul the whole
+      field in), captured motes churn in the core, any key fires a
+      release burst + shockwave, and Esc closes the overlay.
+   ============================================================ */
+(function () {
+  const overlay = document.getElementById('bh-overlay');
+  const canvas  = document.getElementById('bh-canvas');
+  const openBtn = document.getElementById('try-btn');
+  const closeBtn= document.getElementById('bh-close');
+  if (!overlay || !canvas || !openBtn) return;
+  const ctx = canvas.getContext('2d');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const SWATCH = [ [242,217,153], [178,209,255], [217,178,255] ]; // gold, blue, violet
+  let W = 0, H = 0, dpr = 1, motes = [], pulses = [];
+  let hole = { x: 0, y: 0 }, target = { x: 0, y: 0 };
+  let boost = 1, holding = false, repelUntil = 0, capturedCount = 0;
+  let running = false, raf = null, last = 0, lastMove = 0;
+
+  const BASE_R = 190, BASE_G = 70000, START = 90;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const eventR = () => 20 + Math.min(capturedCount, 120) * 0.32;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function seed() {
+    motes = [];
+    for (let i = 0; i < START; i++) {
+      motes.push({ x: rnd(0, W), y: rnd(0, H), vx: rnd(-16, 16), vy: rnd(-16, 16),
+        c: (Math.random() * 3) | 0, size: rnd(3.5, 6.5), cap: false, capF: 0, capA: 0 });
+    }
+  }
+
+  function step(dt, now) {
+    // suction eases back to 1 unless holding
+    boost = holding ? 100 : 1 + (boost - 1) * Math.exp(-dt / 0.6);
+    if (boost < 1) boost = 1;
+    // if the pointer is idle, let the hole drift gently to center so it's never dead
+    if (now - lastMove > 2600) { target.x += (W / 2 - target.x) * 0.02; target.y += (H / 2 - target.y) * 0.02; }
+    hole.x += (target.x - hole.x) * Math.min(1, dt * 12);
+    hole.y += (target.y - hole.y) * Math.min(1, dt * 12);
+    pulses = pulses.filter(p => now - p < 1.6);
+
+    const repelling = now < repelUntil;
+    const diag = Math.hypot(W, H);
+    const reach = Math.min(BASE_R * boost, diag), reach2 = reach * reach;
+    const g = BASE_G * boost, eps2 = 36 * 36, er = eventR();
+    let cap = 0;
+
+    for (const m of motes) {
+      if (m.cap && !repelling) {
+        cap++; m.capA += 1.3 * dt;
+        const rr = er * m.capF;
+        const tx = hole.x + Math.cos(m.capA) * rr, ty = hole.y + Math.sin(m.capA) * rr;
+        const l = Math.min(1, dt * 9);
+        m.x += (tx - m.x) * l; m.y += (ty - m.y) * l; m.vx = m.vy = 0; continue;
+      }
+      const dx = hole.x - m.x, dy = hole.y - m.y;
+      const dist2 = dx * dx + dy * dy + eps2, dist = Math.sqrt(dist2);
+      const nx = dx / dist, ny = dy / dist;
+      if (repelling) {
+        m.cap = false;
+        const outA = BASE_G * 100 / dist2;
+        m.vx -= nx * outA * dt; m.vy -= ny * outA * dt;
+      } else if (dist2 < reach2) {
+        const a = g / dist2 + (boost - 1) * 16;
+        m.vx += nx * a * dt; m.vy += ny * a * dt;               // pull
+        m.vx += -ny * (g / dist2) * 0.12 * dt; m.vy += nx * (g / dist2) * 0.12 * dt; // swirl
+        const prox = Math.max(0, 1 - dist / (er * 4.5));
+        const brake = Math.exp(-prox * 8 * dt);
+        m.vx *= brake; m.vy *= brake;
+        if (dist < er + 40) { m.cap = true; m.capF = rnd(0.16, 0.74);
+          m.capA = Math.atan2(m.y - hole.y, m.x - hole.x); m.vx = m.vy = 0; cap++; continue; }
+      } else {
+        m.vx += rnd(-6, 6) * dt; m.vy += rnd(-6, 6) * dt;
+        m.vx *= Math.exp(-0.5 * dt); m.vy *= Math.exp(-0.5 * dt);
+      }
+      const vmax = repelling ? 2000 : 1400, sp2 = m.vx * m.vx + m.vy * m.vy;
+      if (sp2 > vmax * vmax) { const s = vmax / Math.sqrt(sp2); m.vx *= s; m.vy *= s; }
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      const mm = 6, e = 0.85;
+      if (m.x < mm) { m.x = mm; m.vx = Math.abs(m.vx) * e; } else if (m.x > W - mm) { m.x = W - mm; m.vx = -Math.abs(m.vx) * e; }
+      if (m.y < mm) { m.y = mm; m.vy = Math.abs(m.vy) * e; } else if (m.y > H - mm) { m.y = H - mm; m.vy = -Math.abs(m.vy) * e; }
+    }
+    capturedCount = cap;
+  }
+
+  function rgba(c, a) { return 'rgba(' + SWATCH[c][0] + ',' + SWATCH[c][1] + ',' + SWATCH[c][2] + ',' + a + ')'; }
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    const cx = hole.x, cy = hole.y, er = eventR();
+
+    // infalling motes (streaks + glow)
+    ctx.lineCap = 'round';
+    for (const m of motes) {
+      if (m.cap) continue;
+      const dx = hole.x - m.x, dy = hole.y - m.y, dist = Math.hypot(dx, dy);
+      const near = Math.max(0, 1 - dist / (er * 6));
+      const r = m.size * (1 + near);
+      if (near > 0.25) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(m.c, 0.5 * near); ctx.lineWidth = r;
+        ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x + dx * 0.18, m.y + dy * 0.18); ctx.stroke();
+      }
+      const gr = r * 2.4, grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, gr);
+      grd.addColorStop(0, rgba(m.c, 0.9)); grd.addColorStop(0.4, rgba(m.c, 0.4)); grd.addColorStop(1, rgba(m.c, 0));
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(m.x, m.y, gr, 0, 6.2832); ctx.fill();
+    }
+
+    // shockwave rings
+    for (const p of pulses) {
+      const t = (now - p) / 1.6, rr = er + t * 560, a = (1 - t) * 0.55;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(200,214,255,' + a + ')'; ctx.lineWidth = 3 * (1 - t) + 1;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.2832); ctx.stroke();
+    }
+
+    // lensing halo
+    ctx.globalCompositeOperation = 'lighter';
+    let g1 = ctx.createRadialGradient(cx, cy, er, cx, cy, er * 5);
+    g1.addColorStop(0, 'rgba(128,153,255,0.18)'); g1.addColorStop(1, 'rgba(102,128,255,0)');
+    ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(cx, cy, er * 5, 0, 6.2832); ctx.fill();
+
+    // accretion disk
+    const flare = 0.7 + Math.min(0.35, (boost - 1) * 0.01);
+    ctx.globalAlpha = flare;
+    let g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, er * 2.5);
+    g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(0.5, 'rgba(0,0,0,0)');
+    g2.addColorStop(0.58, 'rgba(255,140,38,0.95)'); g2.addColorStop(0.66, 'rgba(255,217,102,0.8)');
+    g2.addColorStop(0.82, 'rgba(128,179,255,0.28)'); g2.addColorStop(1, 'rgba(128,179,255,0)');
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(cx, cy, er * 2.5, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // event horizon + photon ring
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(cx, cy, er, 0, 6.2832); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(255,230,191,0.95)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(cx, cy, er * 1.04, 0, 6.2832); ctx.stroke();
+
+    // captured core (glowing churn on top)
+    for (const m of motes) {
+      if (!m.cap) continue;
+      const gr = m.size * 2.6, grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, gr);
+      grd.addColorStop(0, rgba(m.c, 0.95)); grd.addColorStop(0.4, rgba(m.c, 0.45)); grd.addColorStop(1, rgba(m.c, 0));
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(m.x, m.y, gr, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+
+  function frame(t) {
+    const now = t / 1000, dt = Math.min(0.05, last ? now - last : 0.016); last = now;
+    step(dt, now); draw(now);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function open() {
+    resize(); seed();
+    target.x = hole.x = W / 2; target.y = hole.y = H / 2; lastMove = performance.now() / 1000;
+    overlay.classList.add('on');
+    document.body.style.overflow = 'hidden';
+    running = true; last = 0;
+    if (!reduce) raf = requestAnimationFrame(frame); else draw(0);
+    // focus so keydown lands here; also blur the button
+    canvas.setAttribute('tabindex', '-1'); canvas.focus({ preventScroll: true });
+  }
+  function close() {
+    overlay.classList.remove('on');
+    document.body.style.overflow = '';
+    running = false; holding = false; boost = 1;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    openBtn.focus({ preventScroll: true });
+  }
+
+  openBtn.addEventListener('click', open);
+  if (closeBtn) closeBtn.addEventListener('click', close);
+
+  const movePt = (x, y) => { target.x = x; target.y = y; lastMove = performance.now() / 1000; };
+  canvas.addEventListener('pointermove', e => movePt(e.clientX, e.clientY));
+  canvas.addEventListener('pointerdown', e => { movePt(e.clientX, e.clientY); holding = true; boost = 100; canvas.setPointerCapture?.(e.pointerId); });
+  window.addEventListener('pointerup', () => { holding = false; });
+
+  // any key = release burst; Esc = close (handled first)
+  window.addEventListener('keydown', e => {
+    if (!running) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    e.preventDefault();
+    repelUntil = performance.now() / 1000 + 0.4;
+    if (pulses.length < 6) pulses.push(performance.now() / 1000);
+  });
+  window.addEventListener('resize', () => { if (running) resize(); });
 })();
 </script>
 </body>

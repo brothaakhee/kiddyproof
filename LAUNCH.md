@@ -194,6 +194,18 @@ Body:
 > a mac app that blocks the keyboard + trackpad so your kid can bash away
 > without wrecking your work — the screen stays looking exactly how you left it.
 
+**Directory paragraph (founder voice — where a longer description fits):**
+> built this because my 2 kids kept attacking my laptop and wrecking my work.
+> one shortcut swallows all keyboard/trackpad input before it hits any app, but
+> the screen stays looking exactly how you left it (slack, half-typed message,
+> whatever) — kids just get calm light to play with on top. exit is a deliberate
+> 3-second hold. the fun part was the "scenes" — calm but still fun for the kids,
+> with a few experimental ones still in the works. mac only right now; windows
+> maybe if there's interest. kiddyproof.app
+
+*(Match [[kiddyproof-founder-copy-voice]]: casual, scenes as the hook, honest
+about WIP, no marketing CTAs, end on the URL.)*
+
 ---
 
 ## Asset checklist

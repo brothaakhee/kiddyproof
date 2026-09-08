@@ -416,27 +416,58 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 }
 .demo-caption b { color: var(--ink-soft); font-weight: 600; }
 
-/* ---- Try it here (full-window black hole) ---- */
-.try-cta { text-align: center; margin-top: 26px; }
+/* ---- Try it here — big CTA (opens the full-window black hole) ---- */
+.try-hero {
+  position: relative;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 52px 32px 48px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.try-eyebrow {
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 22px;
+}
 .btn-try {
-  display: inline-flex; align-items: center; gap: 11px;
-  font-family: inherit; font-size: 18px; font-weight: 700; letter-spacing: -0.01em;
+  display: inline-flex; align-items: center; gap: 13px;
+  font-family: inherit; font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
   color: #0a0f1e; cursor: pointer; border: 0;
-  padding: 16px 30px; border-radius: 999px;
+  padding: 20px 40px; border-radius: 999px;
   background: linear-gradient(135deg, #ffd27a, #ff9d6c 60%, #d98cff);
-  box-shadow: 0 10px 40px rgba(255,160,110,0.34), 0 0 0 1px rgba(255,255,255,0.15) inset;
+  box-shadow: 0 12px 48px rgba(255,160,110,0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
   transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, filter .18s ease;
 }
-.btn-try:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 16px 54px rgba(255,160,110,0.46); filter: brightness(1.04); }
+.btn-try:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 20px 64px rgba(255,160,110,0.5); filter: brightness(1.05); }
 .btn-try:active { transform: translateY(0) scale(0.99); }
-.btn-try svg { width: 20px; height: 20px; }
-.try-note { margin: 14px auto 0; max-width: 40rem; font-size: 13.5px; line-height: 1.6; color: var(--ink-mute); }
-.try-note b { color: var(--ink-soft); font-weight: 600; }
+.btn-try svg { width: 24px; height: 24px; }
+.try-lead {
+  margin: 26px auto 0; max-width: 34rem;
+  font-size: 17px; line-height: 1.6; color: var(--ink-soft);
+}
+.try-lead b { color: #fff; font-weight: 600; }
+.try-sub { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
+.try-sub kbd {
+  font: inherit; font-weight: 700; font-size: 12px;
+  padding: 2px 7px; border-radius: 6px; color: var(--ink-soft);
+  background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.16);
+}
+@media (max-width: 560px) {
+  .try-hero { padding: 40px 20px 36px; }
+  .btn-try { font-size: 19px; padding: 17px 32px; }
+  .try-lead { font-size: 15.5px; }
+}
 
 /* ---- Full-window black-hole overlay ---- */
+/* Transparent, exactly like the app: the page (your "desktop") stays fully
+   visible and untouched behind the scene — only the black hole + motes float
+   on top. A whisper of vignette just helps the light read; the site is not dimmed. */
 #bh-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: radial-gradient(ellipse at 50% 45%, #0a0e1c, #05060c 75%);
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(3,5,12,0.28));
   opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility .4s;
 }
 #bh-overlay.on { opacity: 1; visibility: visible; }
@@ -781,51 +812,23 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
         Download for macOS
       </a>
-      <a href="#demo-stage" class="btn btn-ghost">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
-        See it live
-      </a>
-    </div>
-    <div class="hero-note reveal-hero d5">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Your files never touched</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Exit is a deliberate 3-second parent gesture</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> No account, no cloud</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Developer-ID signed &amp; Apple-notarized</span>
     </div>
 
-    <!-- ===== DEMO WINDOW (the main attraction) ===== -->
+    <!-- ===== TRY IT — big CTA (opens the full-window Black Hole) ===== -->
     <div class="demo-stage reveal-hero d5" id="demo-stage">
       <div class="glow-bed"></div>
-      <div class="window">
-        <div class="titlebar">
-          <div class="lights"><i class="r" id="light-close" role="button" tabindex="0" aria-label="Try to close kid mode"></i><i class="y" id="light-min" role="button" tabindex="0" aria-label="Try to minimize kid mode"></i><i class="g" id="light-zoom" role="button" tabindex="0" aria-label="Release fireflies"></i></div>
-          <span class="ttl">
-            <svg class="shield" viewBox="0 0 24 24" fill="none" stroke="#9ce0ff" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5z"/></svg>
-            kiddyproof — kid mode active
-          </span>
-          <span class="live-badge"><span class="d"></span> Live</span>
-        </div>
-        <div class="demo-toast" id="demo-toast" aria-live="polite"></div>
-        <div class="canvas-frame">
-          <canvas id="demo" aria-hidden="true"></canvas>
-        </div>
-      </div>
-      <p class="demo-caption">
-        <b>A faithful re-creation of the Drift scene</b>, running live in your browser — drifting fireflies, blooms on
-        every tap, a cursor that gently gathers the light. The Mac behind it never feels a thing.
-      </p>
-
-      <div class="try-cta">
+      <div class="try-hero">
+        <p class="try-eyebrow">Play with a real scene, right now</p>
         <button class="btn-try" id="try-btn" type="button" aria-haspopup="dialog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
           Try it here
         </button>
-        <p class="try-note">
-          This is just one sample scene — the app ships with <b>a dozen more</b>, from constellations to
-          ripples to a music box. This one's the <b>Black&nbsp;Hole</b>: your cursor becomes a vacuum. It
-          takes over your whole browser window, exactly like kid mode takes over the Mac —
-          <b>press&nbsp;Esc anytime to come back</b>.
+        <p class="try-lead">
+          This is just <b>one</b> of the scenes — the app ships with <b>a dozen more</b>, from constellations
+          to ripples to a music box. This one's the <b>Black&nbsp;Hole</b>: your cursor becomes a vacuum.
+          It takes over your <b>whole browser window</b>, exactly like kid mode takes over the Mac.
         </p>
+        <p class="try-sub">Press <kbd>Esc</kbd> anytime to come back.</p>
       </div>
     </div>
   </div>
@@ -1062,388 +1065,6 @@ SCENES.forEach((s, i) => {
   gallery.appendChild(el);
   io.observe(el);
 });
-
-/* ============================================================
-   3. THE DEMO — a live re-creation of the app's "Drift" scene.
-      A faint, real-looking desktop sits behind; glowing orbs
-      drift on top; simulated keystrokes release fireflies and
-      clicks bloom rings, exactly as the app does. The desktop is
-      never dimmed — the whole point of kiddyproof.
-   ============================================================ */
-(function () {
-  const canvas = document.getElementById('demo');
-  const ctx = canvas.getContext('2d');
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  let W = 0, H = 0, dpr = 1, ready = false;
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // resetting the backing store clears it; under reduced motion (no loop) repaint the still frame
-    if (reduce && ready) drawStill();
-  }
-  new ResizeObserver(resize).observe(canvas);
-  resize();
-
-  // ---- the app's real firefly palette ----
-  const PALETTE = [
-    [255, 230, 160], // pale gold
-    [255, 200, 115], // warm amber
-    [242, 247, 255], // soft white
-    [156, 224, 255], // pale cyan
-    [255, 204, 223], // soft rose
-  ];
-
-  // deterministic-ish rng we can seed by index for variety
-  let seed = 1337;
-  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-  const pickIdx = () => Math.floor(rnd() * PALETTE.length) % PALETTE.length;
-
-  // ---- pre-rendered glow sprites (built once) so we never allocate a gradient per
-  //      orb per frame — otherwise the dominant cost. life/alpha is applied at draw
-  //      time via globalAlpha, so the result is visually identical to live gradients.
-  const SPRITE_R = 80;
-  function makeSprite(stops) {
-    const c = document.createElement('canvas');
-    c.width = c.height = SPRITE_R * 2;
-    const cx = c.getContext('2d');
-    const g = cx.createRadialGradient(SPRITE_R, SPRITE_R, 0, SPRITE_R, SPRITE_R, SPRITE_R);
-    stops.forEach(([o, col]) => g.addColorStop(o, col));
-    cx.fillStyle = g;
-    cx.beginPath(); cx.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, Math.PI * 2); cx.fill();
-    return c;
-  }
-  const glowSprites = PALETTE.map(([r, g, b]) => makeSprite([
-    [0, `rgba(${r},${g},${b},0.28)`], [1, `rgba(${r},${g},${b},0)`],
-  ]));
-  const coreSprites = PALETTE.map(([r, g, b]) => makeSprite([
-    [0, 'rgba(255,255,255,0.95)'], [0.4, `rgba(${r},${g},${b},0.9)`], [1, `rgba(${r},${g},${b},0)`],
-  ]));
-  const cursorSprite = makeSprite([
-    [0, 'rgba(255,255,255,0.9)'], [0.5, 'rgba(255,230,180,0.5)'], [1, 'rgba(255,230,180,0)'],
-  ]);
-
-  // ---- particles ----
-  let orbs = [];
-  function spawnAmbient() {
-    orbs = [];
-    const n = 26;
-    for (let i = 0; i < n; i++) {
-      orbs.push({
-        x: rnd() * W, y: rnd() * H,
-        vx: (rnd() - 0.5) * 8, vy: (rnd() - 0.5) * 8,
-        r: 2.4 + rnd() * 3.4,
-        ci: pickIdx(),
-        phase: rnd() * Math.PI * 2,
-        twk: 0.6 + rnd() * 0.8,
-        ambient: true, life: 1,
-      });
-    }
-  }
-  spawnAmbient();
-
-  function releaseFirefly(x, y) {
-    orbs.push({
-      x, y, vx: (rnd() - 0.5) * 18, vy: -22 - rnd() * 18,
-      r: 2 + rnd() * 2.6, ci: pickIdx(),
-      phase: rnd() * Math.PI * 2, twk: 1.2,
-      ambient: false, life: 1,
-    });
-    if (orbs.length > 70) orbs.splice(0, orbs.length - 70);
-  }
-
-  let blooms = [];
-  function bloom(x, y) {
-    blooms.push({ x, y, r: 6, maxR: 90 + rnd() * 50, life: 1, ci: pickIdx() });
-    if (blooms.length > 24) blooms.splice(0, blooms.length - 24);   // bound pathological click-mashing
-  }
-
-  // ---- a gently autonomous cursor ----
-  const cursor = { x: W * 0.5, y: H * 0.5, tx: W * 0.5, ty: H * 0.5, t: 0 };
-  function retarget() { cursor.tx = W * (0.2 + rnd() * 0.6); cursor.ty = H * (0.25 + rnd() * 0.55); }
-  retarget();
-
-  // ---- simulated input scheduler (calm, capped cadence) ----
-  let evtTimer = 0, evtGap = 0.55, shieldPulse = 0;
-  function scheduleEvent(dt) {
-    evtTimer += dt;
-    if (evtTimer >= evtGap) {
-      evtTimer = 0; evtGap = 0.42 + rnd() * 0.75;
-      shieldPulse = 1;                    // a tap was just caught at the shield
-      if (rnd() < 0.62) {
-        // keystroke -> firefly near cursor
-        releaseFirefly(cursor.x + (rnd() - 0.5) * 60, cursor.y + (rnd() - 0.5) * 40);
-      } else {
-        // click -> bloom + retarget
-        bloom(cursor.x, cursor.y);
-        retarget();
-      }
-    }
-  }
-
-  // ---- faint, real-looking desktop behind the effects ----
-  function drawDesktop() {
-    // wallpaper: calm dusk gradient
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#243a63');
-    g.addColorStop(0.5, '#2b2c54');
-    g.addColorStop(1, '#3a2a4d');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    // soft wallpaper light
-    const rg = ctx.createRadialGradient(W * 0.7, H * 0.25, 0, W * 0.7, H * 0.25, W * 0.6);
-    rg.addColorStop(0, 'rgba(255,210,160,0.22)'); rg.addColorStop(1, 'rgba(255,210,160,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
-
-    // menu bar
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.fillRect(0, 0, W, Math.max(16, H * 0.045));
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    roundRect(10, H * 0.016, 46, H * 0.016, 2); ctx.fill();
-    for (let i = 0; i < 4; i++) { roundRect(W - 24 - i * 26, H * 0.016, 14, H * 0.016, 2); ctx.fill(); }
-
-    // two app windows — kept crisp and clearly present (your work is still all there)
-    appWindow(W * 0.07, H * 0.16, W * 0.42, H * 0.52, 'rgba(236,240,252,0.20)');
-    appWindow(W * 0.55, H * 0.30, W * 0.36, H * 0.46, 'rgba(236,240,252,0.18)');
-
-    // dock
-    const dw = W * 0.42, dh = Math.max(26, H * 0.075), dx = (W - dw) / 2, dy = H - dh - 8;
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(dx, dy, dw, dh, dh * 0.28); ctx.fill();
-    const icons = 7, pad = dh * 0.18, s = dh - pad * 2, gap = (dw - icons * s) / (icons + 1);
-    // muted, recessive chrome — the glowing orbs stay the only high-energy color on screen
-    const dockCols = ['#b58088', '#bda978', '#86a98e', '#869ec0', '#9b8fb5', '#bf8fa6', '#8fb6c9'];
-    for (let i = 0; i < icons; i++) {
-      ctx.fillStyle = dockCols[i] + 'aa';
-      roundRect(dx + gap + i * (s + gap), dy + pad, s, s, s * 0.26); ctx.fill();
-    }
-  }
-  function appWindow(x, y, w, h, fill) {
-    // frosted panel
-    ctx.fillStyle = fill;
-    roundRect(x, y, w, h, 10); ctx.fill();
-    // top highlight + crisp 1px border so it reads as a real, present window
-    const hi = ctx.createLinearGradient(0, y, 0, y + h * 0.5);
-    hi.addColorStop(0, 'rgba(255,255,255,0.12)'); hi.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = hi; roundRect(x, y, w, h, 10); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
-    roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 10); ctx.stroke();
-    // full-color titlebar lights
-    const ly = y + h * 0.06;
-    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => {
-      ctx.fillStyle = c; ctx.beginPath();
-      ctx.arc(x + 16 + i * 14, ly, 3.2, 0, Math.PI * 2); ctx.fill();
-    });
-    // content lines
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    for (let i = 0; i < 6; i++) {
-      const lw = w * (0.4 + (i % 3) * 0.18);
-      roundRect(x + 16, y + h * 0.18 + i * (h * 0.11), lw, 5, 2.5); ctx.fill();
-    }
-  }
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  // ---- effect drawing: contrast core + additive glow, via cached sprites ----
-  function drawOrb(o, tw) {
-    const rad = o.r * (2.4 + tw * 0.5);
-    ctx.globalAlpha = o.life;
-    // additive glow
-    ctx.globalCompositeOperation = 'lighter';
-    const gr = rad * 3.2;
-    ctx.drawImage(glowSprites[o.ci], o.x - gr, o.y - gr, gr * 2, gr * 2);
-    // bright core
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(coreSprites[o.ci], o.x - rad, o.y - rad, rad * 2, rad * 2);
-    ctx.globalAlpha = 1;
-  }
-
-  function step(dt) {
-    shieldPulse = Math.max(0, shieldPulse - dt * 2.4);   // fades the "caught" shimmer
-    // cursor easing
-    cursor.t += dt;
-    if (cursor.t > 2.6) { cursor.t = 0; retarget(); }
-    cursor.x += (cursor.tx - cursor.x) * Math.min(1, dt * 1.6);
-    cursor.y += (cursor.ty - cursor.y) * Math.min(1, dt * 1.6);
-
-    scheduleEvent(dt);
-
-    const attract = 60;
-    for (let i = orbs.length - 1; i >= 0; i--) {
-      const o = orbs[i];
-      o.phase += dt * o.twk * 2.0;
-      // brownian wander
-      o.vx += (rnd() - 0.5) * 14 * dt;
-      o.vy += (rnd() - 0.5) * 14 * dt;
-      if (!o.ambient) o.vy -= 6 * dt; // fireflies rise
-      // gentle gather toward cursor when near
-      const dx = cursor.x - o.x, dy = cursor.y - o.y;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < 160 * 160) {
-        const d = Math.sqrt(d2) || 1;
-        o.vx += (dx / d) * attract * dt;
-        o.vy += (dy / d) * attract * dt;
-      }
-      // damping keeps it slow & calm
-      const damp = Math.exp(-0.7 * dt);
-      o.vx *= damp; o.vy *= damp;
-      o.x += o.vx * dt; o.y += o.vy * dt;
-
-      if (o.ambient) {
-        // toroidal wrap
-        if (o.x < -20) o.x = W + 20; if (o.x > W + 20) o.x = -20;
-        if (o.y < -20) o.y = H + 20; if (o.y > H + 20) o.y = -20;
-      } else {
-        o.life -= dt * 0.12;
-        if (o.life <= 0 || o.y < -30) orbs.splice(i, 1);
-      }
-    }
-
-    for (let i = blooms.length - 1; i >= 0; i--) {
-      const bl = blooms[i];
-      bl.r += (bl.maxR - bl.r) * Math.min(1, dt * 2.2);
-      bl.life -= dt * 0.8;
-      if (bl.life <= 0) blooms.splice(i, 1);
-    }
-  }
-
-  function draw() {
-    drawDesktop();
-
-    // blooms (soft expanding rings)
-    ctx.globalCompositeOperation = 'lighter';
-    for (const bl of blooms) {
-      const [r, g, b] = PALETTE[bl.ci];
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${0.5 * bl.life})`;
-      ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2); ctx.stroke();
-      const grd = ctx.createRadialGradient(bl.x, bl.y, bl.r * 0.5, bl.x, bl.y, bl.r);
-      grd.addColorStop(0, `rgba(${r},${g},${b},0)`);
-      grd.addColorStop(0.8, `rgba(${r},${g},${b},${0.12 * bl.life})`);
-      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'source-over';
-
-    // orbs
-    for (const o of orbs) {
-      const tw = 0.6 + 0.4 * Math.sin(o.phase);
-      drawOrb(o, tw);
-    }
-    ctx.globalCompositeOperation = 'source-over';
-
-    // the gathering cursor (a soft glowing dot), from the cached sprite
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(cursorSprite, cursor.x - 16, cursor.y - 16, 32, 32);
-
-    // interception cue: when input is "caught", the shield edge shimmers softly (sub-second, calm)
-    if (shieldPulse > 0.01) {
-      ctx.strokeStyle = `rgba(156,224,255,${0.22 * shieldPulse})`;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(156,224,255,0.8)';
-      ctx.shadowBlur = 20 * shieldPulse;
-      roundRect(2, 2, W - 4, H - 4, 11); ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  // a single still frame (used for prefers-reduced-motion, and to repaint after resize)
-  function drawStill() {
-    drawDesktop();
-    for (const o of orbs) drawOrb(o, 0.8);
-  }
-
-  // ---- the traffic lights: kid mode playfully refuses to close ----
-  const windowEl = document.querySelector('.demo-stage .window');
-  const toastEl = document.getElementById('demo-toast');
-  let toastTimer = null;
-  function toast(msg) {
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
-  }
-  function jiggle(cls) {
-    windowEl.classList.remove('shake', 'boop');
-    void windowEl.offsetWidth;               // restart the animation
-    windowEl.classList.add(cls);
-  }
-  function centerBurst(n) {
-    shieldPulse = 1;
-    bloom(W / 2, H * 0.45);
-    for (let i = 0; i < n; i++) releaseFirefly(W * (0.3 + rnd() * 0.4), H * (0.25 + rnd() * 0.5));
-  }
-  const wire = (id, fn) => {
-    const el = document.getElementById(id);
-    el.addEventListener('click', fn);
-    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
-  };
-  wire('light-close', () => { jiggle('shake'); centerBurst(3);
-    toast("Nice try — kid mode only exits with the 3-second parent hold 😉"); });
-  wire('light-min', () => { jiggle('boop'); centerBurst(2);
-    toast("Can't minimize the cage — that's the whole point"); });
-  wire('light-zoom', () => { jiggle('boop'); centerBurst(9);
-    toast("Fireflies! (This one's just for fun)"); });
-
-  // ---- let visitors interact too: pointer = cursor, click = bloom ----
-  canvas.addEventListener('pointermove', (e) => {
-    const r = canvas.getBoundingClientRect();
-    cursor.tx = e.clientX - r.left; cursor.ty = e.clientY - r.top; cursor.t = 0;
-  });
-  canvas.addEventListener('pointerdown', (e) => {
-    const r = canvas.getBoundingClientRect();
-    shieldPulse = 1;
-    bloom(e.clientX - r.left, e.clientY - r.top);
-    for (let i = 0; i < 4; i++) releaseFirefly(e.clientX - r.left, e.clientY - r.top);
-  });
-
-  let last = 0, rafId = null;
-  function frame(t) {
-    const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
-    last = t;
-    step(dt);
-    draw();
-    rafId = requestAnimationFrame(frame);
-  }
-  function start() {
-    if (rafId !== null) return; // a loop already exists — never double up
-    last = 0;
-    rafId = requestAnimationFrame(frame);
-  }
-  function stop() {
-    if (rafId === null) return;
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }
-
-  ready = true;   // sprites + orbs now exist; resize() may safely repaint the still frame
-
-  if (reduce) {
-    // single calm still frame, repainted on resize via resize()'s reduce branch
-    drawStill();
-  } else {
-    // pause when offscreen to save battery
-    const vis = new IntersectionObserver((es) => {
-      es.forEach(en => {
-        if (en.isIntersecting) start();
-        else stop();
-      });
-    }, { threshold: 0.05 });
-    vis.observe(canvas);
-    start();
-  }
-})();
 
 /* ============================================================
    4. TRY IT HERE — the Black Hole scene, full browser window.

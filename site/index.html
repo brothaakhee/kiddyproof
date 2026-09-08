@@ -1035,8 +1035,9 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
    ============================================================ */
 (function () {
   const track = (name, data) => { try { window.umami && window.umami.track(name, data); } catch (e) {} };
-  // Downloads: any link to the release DMG, plus the nav Download button.
-  document.querySelectorAll('a[href*="releases"], a[href*=".dmg"], a[href="#download"]').forEach(a => {
+  // Downloads: only real DMG links count. (The footer "Download" is an
+  // in-page #download scroll anchor, not a download — excluded on purpose.)
+  document.querySelectorAll('a[href*="releases"], a[href*=".dmg"]').forEach(a => {
     a.addEventListener('click', () => track('download', { where: a.closest('nav') ? 'nav' : 'body' }));
   });
   // Live demo: the "Try it here" button.

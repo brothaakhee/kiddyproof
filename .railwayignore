@@ -1,0 +1,9 @@
+# heavy non-web dev assets — keep the site deploy small (Cloudflare 100MB upload cap)
+shots/
+Assets/
+launch-assets/
+screenshots/
+Tests/
+*.dmg
+*.fbx
+*.glb

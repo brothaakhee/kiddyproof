@@ -7,6 +7,12 @@
 <meta name="description" content="A native macOS app that turns your child's typing and clicking into calm, glowing light — while your real desktop stays untouched. One shortcut in, one parent gesture out." />
 
 <link rel="canonical" href="https://kiddyproof.app/" />
+
+<!-- Analytics: self-hosted Umami (privacy-first, no cookies). Custom events
+     for downloads, demo tries, and per-section reads are fired from the script
+     below. Time-on-page + visitors are tracked automatically. -->
+<script defer src="https://umami-production-c71b.up.railway.app/script.js"
+        data-website-id="4f9a7d9a-5c29-42a4-a347-41dc9a25a3ea"></script>
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="kiddyproof" />
 <meta property="og:title" content="kiddyproof — hand over the keyboard, keep your work" />
@@ -374,6 +380,21 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 .lights { display: flex; gap: 8px; }
 .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 .lights .r { background: #ff5f57; } .lights .y { background: #febc2e; } .lights .g { background: #28c840; }
+.lights i { cursor: pointer; transition: transform .15s ease, filter .15s ease; border: 0; padding: 0; }
+.lights i:hover { transform: scale(1.25); filter: brightness(1.15); }
+.lights i:active { transform: scale(0.9); }
+.window.shake { animation: kp-shake .45s cubic-bezier(.36,.07,.19,.97); }
+@keyframes kp-shake {
+  10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); } 40%, 60% { transform: translateX(5px); }
+}
+.window.boop { animation: kp-boop .4s ease; }
+@keyframes kp-boop { 30% { transform: scale(0.985) translateY(3px); } 100% { transform: none; } }
+.demo-toast { position: absolute; left: 50%; top: 52px; transform: translateX(-50%) translateY(-6px);
+  background: rgba(12,18,40,0.92); border: 1px solid rgba(156,224,255,0.35); color: #dfe7ff;
+  font-size: 13.5px; padding: 7px 14px; border-radius: 999px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; z-index: 5; }
+.demo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .titlebar .ttl {
   position: absolute; left: 0; right: 0; text-align: center;
   font-size: 13px; color: var(--ink-mute); font-weight: 500;
@@ -400,6 +421,113 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
   color: var(--ink-mute);
 }
 .demo-caption b { color: var(--ink-soft); font-weight: 600; }
+
+/* ---- Try it here — big CTA (opens the full-window black hole) ---- */
+.try-hero {
+  position: relative;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 52px 32px 48px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 40px 120px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.try-eyebrow {
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 22px;
+}
+.btn-try {
+  display: inline-flex; align-items: center; gap: 13px;
+  font-family: inherit; font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+  color: #0a0f1e; cursor: pointer; border: 0;
+  padding: 20px 40px; border-radius: 999px;
+  background: linear-gradient(135deg, #ffd27a, #ff9d6c 60%, #d98cff);
+  box-shadow: 0 12px 48px rgba(255,160,110,0.4), 0 0 0 1px rgba(255,255,255,0.15) inset;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, filter .18s ease;
+}
+.btn-try:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 20px 64px rgba(255,160,110,0.5); filter: brightness(1.05); }
+.btn-try:active { transform: translateY(0) scale(0.99); }
+.btn-try svg { width: 24px; height: 24px; }
+/* Two distinct actions, side by side: the playful gradient hook + a calm
+   glass download so the warm tones don't clash. */
+.try-actions { display: flex; gap: 16px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
+.btn-dl {
+  display: inline-flex; align-items: center; justify-content: center; gap: 11px;
+  font-family: inherit; font-size: 20px; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--ink-soft); cursor: pointer; text-decoration: none;
+  padding: 20px 30px; border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), background .18s ease, border-color .18s ease;
+}
+.btn-dl:hover { transform: translateY(-3px); background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.3); color: #fff; }
+.btn-dl:active { transform: translateY(0); }
+.btn-dl svg { width: 20px; height: 20px; }
+.try-lead {
+  margin: 26px auto 0; max-width: 34rem;
+  font-size: 17px; line-height: 1.6; color: var(--ink-soft);
+}
+.try-lead b { color: #fff; font-weight: 600; }
+.try-sub { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
+.try-sub kbd {
+  font: inherit; font-weight: 700; font-size: 12px;
+  padding: 2px 7px; border-radius: 6px; color: var(--ink-soft);
+  background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.16);
+}
+@media (max-width: 560px) {
+  .try-hero { padding: 40px 20px 36px; }
+  .btn-try { font-size: 19px; padding: 17px 32px; }
+  .try-lead { font-size: 15.5px; }
+}
+
+/* ---- Full-window black-hole overlay ---- */
+/* Transparent, exactly like the app: the page (your "desktop") stays fully
+   visible and untouched behind the scene — only the black hole + motes float
+   on top. A whisper of vignette just helps the light read; the site is not dimmed. */
+#bh-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(3,5,12,0.28));
+  opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility .4s;
+}
+#bh-overlay.on { opacity: 1; visibility: visible; }
+#bh-canvas { display: block; width: 100%; height: 100%; cursor: none; touch-action: none; }
+.bh-hint {
+  position: fixed; top: 26px; left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 16px;
+  padding: 14px 26px; border-radius: 999px; z-index: 2;
+  background: rgba(6,9,18,0.9); border: 1px solid rgba(255,255,255,0.28);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 34px rgba(0,0,0,0.55);
+  color: #fff; font-size: 16.5px; font-weight: 500;
+  opacity: 0; transition: opacity .5s ease .3s;
+  pointer-events: none; white-space: nowrap; max-width: 94vw;
+}
+#bh-overlay.on .bh-hint { opacity: 1; }
+.bh-hint b { color: #ffd27a; font-weight: 700; }
+.bh-hint kbd {
+  font: inherit; font-weight: 700; font-size: 14px;
+  padding: 3px 9px; border-radius: 7px; color: #fff;
+  background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.32);
+}
+@media (max-width: 640px) { .bh-hint { font-size: 14px; gap: 10px; padding: 12px 18px; white-space: normal; text-align: center; } }
+.bh-hint .sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); }
+.bh-hint .tip { color: rgba(223,231,255,0.7); }
+.bh-close {
+  position: fixed; top: 20px; right: 24px; z-index: 3;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; color: #dfe7ff;
+  background: rgba(10,15,30,0.55); border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  opacity: 0; transition: opacity .5s ease .3s, transform .15s ease, background .15s ease;
+}
+#bh-overlay.on .bh-close { opacity: 1; }
+.bh-close:hover { background: rgba(255,255,255,0.14); transform: scale(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  #bh-overlay, .bh-hint, .bh-close { transition: none; }
+}
 
 /* ============================ SECTION PRIMITIVES ============================ */
 section { position: relative; }
@@ -689,7 +817,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#how">How it works</a>
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
-      <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary btn-sm nav-cta">Get early access</a>
+      <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn btn-primary btn-sm nav-cta">Download</a>
     </div>
   </div>
 </nav>
@@ -704,43 +832,28 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       and scrolling are caught before they reach your apps — and turned into calm, glowing light
       your little one can play with. Your real desktop stays right there, untouched.
     </p>
-    <div class="hero-actions reveal-hero d4">
-      <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
-        Get early access
-      </a>
-      <a href="#demo-stage" class="btn btn-ghost">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
-        See it live
-      </a>
-    </div>
-    <div class="hero-note reveal-hero d5">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Your files never touched</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Exit is a deliberate 3-second parent gesture</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> No account, no cloud</span>
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg> Developer-ID signed &amp; Apple-notarized</span>
-    </div>
-
-    <!-- ===== DEMO WINDOW (the main attraction) ===== -->
-    <div class="demo-stage reveal-hero d5" id="demo-stage">
+    <!-- ===== TRY IT — big CTA (opens the full-window Black Hole) ===== -->
+    <div class="demo-stage reveal-hero d4" id="demo-stage">
       <div class="glow-bed"></div>
-      <div class="window">
-        <div class="titlebar">
-          <div class="lights"><i class="r"></i><i class="y"></i><i class="g"></i></div>
-          <span class="ttl">
-            <svg class="shield" viewBox="0 0 24 24" fill="none" stroke="#9ce0ff" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5z"/></svg>
-            kiddyproof — kid mode active
-          </span>
-          <span class="live-badge"><span class="d"></span> Live</span>
+      <div class="try-hero">
+        <p class="try-eyebrow">Play with a real scene, right now</p>
+        <div class="try-actions">
+          <button class="btn-try" id="try-btn" type="button" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+            Try it here
+          </button>
+          <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn-dl">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
+            Download for macOS
+          </a>
         </div>
-        <div class="canvas-frame">
-          <canvas id="demo" aria-hidden="true"></canvas>
-        </div>
+        <p class="try-lead">
+          This is just <b>one</b> of the scenes — the app ships with <b>a dozen more</b>, from constellations
+          to ripples to a music box. This one's the <b>Black&nbsp;Hole</b>: your cursor becomes a vacuum.
+          It takes over your <b>whole browser window</b>, exactly like kid mode takes over the Mac.
+        </p>
+        <p class="try-sub">Press <kbd>Esc</kbd> anytime to come back.</p>
       </div>
-      <p class="demo-caption">
-        <b>A faithful re-creation of the Drift scene</b>, running live in your browser — drifting fireflies, blooms on
-        every tap, a cursor that gently gathers the light. The Mac behind it never feels a thing.
-      </p>
     </div>
   </div>
 </header>
@@ -762,7 +875,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <div class="step reveal s2" style="--c: rgba(156,224,255,0.22)">
         <span class="num">2</span>
         <h3>The cage drops</h3>
-        <p>A transparent shield falls over the whole screen. Typing, clicks and scrolls are swallowed at the system level — before your apps can react.</p>
+        <p>A gentle shield settles over the whole screen. Every tap, click, and scroll is caught before it can reach a single app, file, or message.</p>
       </div>
       <div class="step reveal s3" style="--c: rgba(255,204,223,0.22)">
         <span class="num">3</span>
@@ -793,26 +906,12 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     <div class="split">
       <div class="reveal">
         <span class="kicker">Why a cat?</span>
-        <h2>A <em>kiddy</em> for your kiddo.</h2>
+        <h2>Meet the <em>kiddy</em>.</h2>
         <p class="sec-head" style="margin-bottom:0">
-          “Kiddy” has always meant two things — a small child, and a small cat. kiddyproof is built
-          for both kinds of mischief: the curious paws and the curious fingers that find every key
-          they shouldn't. So we gave the app a calm little cat to watch over the chaos.
+          “Kiddy” means two things — a small child, and a small cat. So kiddyproof got a calm
+          little mascot to watch over the chaos. An actual playable <b>kitty scene</b> is on the
+          way… it's a work in progress&nbsp;:D
         </p>
-        <ul class="flist">
-          <li>
-            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-            <div><h3>Made for the in-between moments</h3><p>The call you can't drop, the email mid-sentence, the toddler who wants the laptop <em>now</em>.</p></div>
-          </li>
-          <li>
-            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7z"/></svg></span>
-            <div><h3>Protective, not punishing</h3><p>No scary lock screen. Just a soft, beautiful world where ordinary typing, clicking, and scrolling can't reach your apps, files, or messages.</p></div>
-          </li>
-          <li>
-            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
-            <div><h3>Quietly serious underneath</h3><p>The cuteness is skin-deep. Beneath it is a system-level input tap and an independent watchdog built to hand control back to you.</p></div>
-          </li>
-        </ul>
       </div>
       <div class="cat-stage reveal s2">
         <div class="halo"></div>
@@ -831,14 +930,14 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     <div class="sec-head center reveal">
       <span class="kicker">The serious part</span>
       <h2>Engineered like it matters. <em>Because it does.</em></h2>
-      <p>The blocking isn't a flimsy overlay you can click through. It's a system-level event tap,
-         designed against every way it could fail — and built to be hardened long before it ever guards a screen.</p>
+      <p>This isn't a flimsy screen you can click through. It catches every keystroke and click before it
+         can reach your apps — and it was stress-tested against every way it could fail before it ever guarded a screen.</p>
     </div>
     <div class="trust">
       <div class="tcard reveal s1">
         <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5z"/></svg>
         <h3>Caught at the source</h3>
-        <p>A <code>CGEventTap</code> swallows input on a dedicated thread — ordinary typing, clicks and scrolls never reach your apps. The overlay is purely visual.</p>
+        <p>Every keystroke, click, and scroll is caught the instant it happens — none of it ever reaches your apps. The glowing overlay is just for show.</p>
       </div>
       <div class="tcard reveal s2">
         <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 5V3M12 21v-2M5 12H3M21 12h-2"/><path d="M7 7 5.5 5.5M17 7l1.5-1.5M7 17l-1.5 1.5M17 17l1.5 1.5"/></svg>
@@ -852,31 +951,27 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       </div>
       <div class="tcard reveal s4">
         <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M12 2v6M12 22v-6"/><circle cx="12" cy="12" r="4"/><path d="M4 12H2M22 12h-2"/></svg>
-        <h3>An independent watchdog</h3>
-        <p>A separate, tap-free process monitors a heartbeat. If anything hangs — even the app itself — it restores your control within seconds.</p>
+        <h3>A built-in safety net</h3>
+        <p>A separate little guardian keeps watch the whole time. If anything ever hiccups — even kiddyproof itself — it hands control straight back to you within seconds.</p>
       </div>
     </div>
 
-    <!-- honest scoping: the section a careful parent looks for -->
+    <!-- the friendly, honest edges — what a caring parent actually wants to know -->
     <div class="goodtoknow reveal s2">
-      <h3>Good to know — exactly where the edges are</h3>
-      <p style="margin:0 0 14px; color:var(--ink-mute); font-size:0.95rem; line-height:1.55">kiddyproof blocks ordinary typing, clicking, and scrolling very well. A few escapes sit below
-         what any Mac app can intercept — we tell you exactly where the edges are, because you should never have to guess.</p>
+      <h3>Things we can't protect you from</h3>
+      <p style="margin:0 0 14px; color:var(--ink-mute); font-size:0.95rem; line-height:1.55">kiddyproof handles the typing, clicking, and scrolling beautifully. A few things are simply
+         out of any app's hands — so here they are, plainly, because you should never have to guess.</p>
       <ul>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>It stays quiet.</b> Effects come with soft, sparse sound — never percussive or jarring — and a single setting mutes audio entirely if you'd rather hand over a silent screen.</span></li>
+          <span><b>The power button.</b> A determined little thumb can still put the Mac to sleep. That ends playtime — but your work stays safe and sound, right where you left it.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>Hardware buttons can't be caught.</b> The power / Touch&nbsp;ID button works at the hardware level — a press can sleep or lock the Mac (your documents stay safe, but kid mode ends).</span></li>
+          <span><b>Extremely clever children.</b> If yours has already memorized your three-second exit gesture… we're as impressed as you are. (Maybe pick a new one.)</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>A few macOS-reserved shortcuts can slip through.</b> Force Quit (⌘⌥⎋) and accessibility shortcuts (like VoiceOver's ⌘F5) are handled below where an app can reliably block them — a determined mash could trigger one.</span></li>
+          <span><b>A whole palm on the trackpad.</b> A big two-fisted swipe can occasionally slip past to another screen. Rare — but toddlers are nothing if not creative.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>Big trackpad swipes reach macOS directly.</b> Three- and four-finger Mission&nbsp;Control and Spaces gestures come from the trackpad hardware — a flat toddler hand on the trackpad can switch Spaces or open Mission&nbsp;Control.</span></li>
+          <span><b>Spilled juice and sticky fingers.</b> kiddyproof guards the software, not the hardware. Keep the snacks — and the full sippy cups — at a safe distance.</span></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>The lid and the lock keep their jobs.</b> Closing the lid, or an idle auto-lock timer, still sleeps or locks the Mac like always — kiddyproof keeps the display awake while armed, but it can't (and shouldn't) override the lid.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>Over another app's native-fullscreen video or game, the visuals step back.</b> Input is still blocked, but the glowing cage can't paint over foreign fullscreen content — you'll see the video, not the fireflies.</span></li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
-          <span><b>It won't run when it can't be safe.</b> If macOS Secure Input is active (a password field, FileVault), kiddyproof refuses to arm rather than pretend — so you're never falsely reassured.</span></li>
+          <span><b>The laptop walking off.</b> A closed lid still sleeps the Mac, and small hands love to carry things. If you're stepping away, take it with you.</span></li>
       </ul>
     </div>
   </div>
@@ -888,15 +983,15 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     <div class="cta-card reveal">
       <svg class="minicat" aria-hidden="true"><use href="#cat"/></svg>
       <h2>Let them play.<br/><em>Get back to work.</em></h2>
-      <p>Free while in early access. Built to ship Developer-ID signed and notarized for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
+      <p>Free for 3 days, then a one-time license — <a href="/buy">get yours here</a>. Developer-ID signed for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
       <div class="hero-actions">
-        <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20early%20access" class="btn btn-primary">
+        <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
-          Get early access
+          Download for macOS
         </a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
-      <small>Early access for macOS · no account, no cloud</small>
+      <small>3-day free trial · one-time license · no account, no cloud</small>
     </div>
   </div>
 </section>
@@ -912,7 +1007,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#how">How it works</a>
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
-      <a href="#download">Early access</a>
+      <a href="#download">Download</a>
     </div>
     <span class="copy">© 2026 kiddyproof · made for parents, watched by a cat</span>
   </div>
@@ -920,7 +1015,48 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
 
 </div><!-- /wrap -->
 
+<!-- ===== Full-window Black Hole overlay (Try it here) ===== -->
+<div id="bh-overlay" role="dialog" aria-modal="true" aria-label="Black Hole scene — press Escape to exit">
+  <canvas id="bh-canvas"></canvas>
+  <div class="bh-hint">
+    <span>move to steer · <b>click and hold</b> to pull it all in · <b>any key</b> to blast out</span>
+    <span class="sep"></span>
+    <span class="tip">press <kbd>Esc</kbd> to exit</span>
+  </div>
+  <button class="bh-close" id="bh-close" type="button" aria-label="Exit (Esc)">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</div>
+
 <script>
+/* ============================================================
+   0. Analytics events (Umami) — downloads, demo tries, section reads.
+      Visitors + time-on-page are tracked automatically by the loader.
+   ============================================================ */
+(function () {
+  const track = (name, data) => { try { window.umami && window.umami.track(name, data); } catch (e) {} };
+  // Downloads: only real DMG links count. (The footer "Download" is an
+  // in-page #download scroll anchor, not a download — excluded on purpose.)
+  document.querySelectorAll('a[href*="releases"], a[href*=".dmg"]').forEach(a => {
+    a.addEventListener('click', () => track('download', { where: a.closest('nav') ? 'nav' : 'body' }));
+  });
+  // Live demo: the "Try it here" button.
+  const tb = document.getElementById('try-btn');
+  if (tb) tb.addEventListener('click', () => track('demo-try'));
+  // Sections read: fire once when each major section first enters view.
+  const seen = new Set();
+  const secObs = new IntersectionObserver((ents) => {
+    ents.forEach(e => {
+      if (e.isIntersecting && !seen.has(e.target.id)) {
+        seen.add(e.target.id); track('read', { section: e.target.id });
+      }
+    });
+  }, { threshold: 0.4 });
+  ['how', 'effects', 'safety', 'demo-stage', 'download'].forEach(id => {
+    const el = document.getElementById(id); if (el) secObs.observe(el);
+  });
+})();
+
 /* ============================================================
    1. Nav scroll state + scroll reveals
    ============================================================ */
@@ -969,353 +1105,206 @@ SCENES.forEach((s, i) => {
 });
 
 /* ============================================================
-   3. THE DEMO — a live re-creation of the app's "Drift" scene.
-      A faint, real-looking desktop sits behind; glowing orbs
-      drift on top; simulated keystrokes release fireflies and
-      clicks bloom rings, exactly as the app does. The desktop is
-      never dimmed — the whole point of kiddyproof.
+   4. TRY IT HERE — the Black Hole scene, full browser window.
+      A faithful port of the app's CalmBlackholeScene: the cursor
+      is a vacuum (hold to crank suction ~100x and haul the whole
+      field in), captured motes churn in the core, any key fires a
+      release burst + shockwave, and Esc closes the overlay.
    ============================================================ */
 (function () {
-  const canvas = document.getElementById('demo');
+  const overlay = document.getElementById('bh-overlay');
+  const canvas  = document.getElementById('bh-canvas');
+  const openBtn = document.getElementById('try-btn');
+  const closeBtn= document.getElementById('bh-close');
+  if (!overlay || !canvas || !openBtn) return;
   const ctx = canvas.getContext('2d');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let W = 0, H = 0, dpr = 1, ready = false;
+  const SWATCH = [ [242,217,153], [178,209,255], [217,178,255] ]; // gold, blue, violet
+  let W = 0, H = 0, dpr = 1, motes = [], pulses = [];
+  let hole = { x: 0, y: 0 }, target = { x: 0, y: 0 };
+  let boost = 1, holding = false, repelUntil = 0, capturedCount = 0;
+  let running = false, raf = null, last = 0, lastMove = 0;
+
+  const BASE_R = 190, BASE_G = 70000, START = 90;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const eventR = () => 20 + Math.min(capturedCount, 120) * 0.32;
+
   function resize() {
-    const r = canvas.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // resetting the backing store clears it; under reduced motion (no loop) repaint the still frame
-    if (reduce && ready) drawStill();
   }
-  new ResizeObserver(resize).observe(canvas);
-  resize();
 
-  // ---- the app's real firefly palette ----
-  const PALETTE = [
-    [255, 230, 160], // pale gold
-    [255, 200, 115], // warm amber
-    [242, 247, 255], // soft white
-    [156, 224, 255], // pale cyan
-    [255, 204, 223], // soft rose
-  ];
-
-  // deterministic-ish rng we can seed by index for variety
-  let seed = 1337;
-  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-  const pickIdx = () => Math.floor(rnd() * PALETTE.length) % PALETTE.length;
-
-  // ---- pre-rendered glow sprites (built once) so we never allocate a gradient per
-  //      orb per frame — otherwise the dominant cost. life/alpha is applied at draw
-  //      time via globalAlpha, so the result is visually identical to live gradients.
-  const SPRITE_R = 80;
-  function makeSprite(stops) {
-    const c = document.createElement('canvas');
-    c.width = c.height = SPRITE_R * 2;
-    const cx = c.getContext('2d');
-    const g = cx.createRadialGradient(SPRITE_R, SPRITE_R, 0, SPRITE_R, SPRITE_R, SPRITE_R);
-    stops.forEach(([o, col]) => g.addColorStop(o, col));
-    cx.fillStyle = g;
-    cx.beginPath(); cx.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, Math.PI * 2); cx.fill();
-    return c;
-  }
-  const glowSprites = PALETTE.map(([r, g, b]) => makeSprite([
-    [0, `rgba(${r},${g},${b},0.28)`], [1, `rgba(${r},${g},${b},0)`],
-  ]));
-  const coreSprites = PALETTE.map(([r, g, b]) => makeSprite([
-    [0, 'rgba(255,255,255,0.95)'], [0.4, `rgba(${r},${g},${b},0.9)`], [1, `rgba(${r},${g},${b},0)`],
-  ]));
-  const cursorSprite = makeSprite([
-    [0, 'rgba(255,255,255,0.9)'], [0.5, 'rgba(255,230,180,0.5)'], [1, 'rgba(255,230,180,0)'],
-  ]);
-
-  // ---- particles ----
-  let orbs = [];
-  function spawnAmbient() {
-    orbs = [];
-    const n = 26;
-    for (let i = 0; i < n; i++) {
-      orbs.push({
-        x: rnd() * W, y: rnd() * H,
-        vx: (rnd() - 0.5) * 8, vy: (rnd() - 0.5) * 8,
-        r: 2.4 + rnd() * 3.4,
-        ci: pickIdx(),
-        phase: rnd() * Math.PI * 2,
-        twk: 0.6 + rnd() * 0.8,
-        ambient: true, life: 1,
-      });
+  function seed() {
+    motes = [];
+    for (let i = 0; i < START; i++) {
+      motes.push({ x: rnd(0, W), y: rnd(0, H), vx: rnd(-16, 16), vy: rnd(-16, 16),
+        c: (Math.random() * 3) | 0, size: rnd(3.5, 6.5), cap: false, capF: 0, capA: 0 });
     }
   }
-  spawnAmbient();
 
-  function releaseFirefly(x, y) {
-    orbs.push({
-      x, y, vx: (rnd() - 0.5) * 18, vy: -22 - rnd() * 18,
-      r: 2 + rnd() * 2.6, ci: pickIdx(),
-      phase: rnd() * Math.PI * 2, twk: 1.2,
-      ambient: false, life: 1,
-    });
-    if (orbs.length > 70) orbs.splice(0, orbs.length - 70);
-  }
+  function step(dt, now) {
+    // suction eases back to 1 unless holding
+    boost = holding ? 100 : 1 + (boost - 1) * Math.exp(-dt / 0.6);
+    if (boost < 1) boost = 1;
+    // if the pointer is idle, let the hole drift gently to center so it's never dead
+    if (now - lastMove > 2600) { target.x += (W / 2 - target.x) * 0.02; target.y += (H / 2 - target.y) * 0.02; }
+    hole.x += (target.x - hole.x) * Math.min(1, dt * 12);
+    hole.y += (target.y - hole.y) * Math.min(1, dt * 12);
+    pulses = pulses.filter(p => now - p < 1.6);
 
-  let blooms = [];
-  function bloom(x, y) {
-    blooms.push({ x, y, r: 6, maxR: 90 + rnd() * 50, life: 1, ci: pickIdx() });
-    if (blooms.length > 24) blooms.splice(0, blooms.length - 24);   // bound pathological click-mashing
-  }
+    const repelling = now < repelUntil;
+    const diag = Math.hypot(W, H);
+    const reach = Math.min(BASE_R * boost, diag), reach2 = reach * reach;
+    const g = BASE_G * boost, eps2 = 36 * 36, er = eventR();
+    let cap = 0;
 
-  // ---- a gently autonomous cursor ----
-  const cursor = { x: W * 0.5, y: H * 0.5, tx: W * 0.5, ty: H * 0.5, t: 0 };
-  function retarget() { cursor.tx = W * (0.2 + rnd() * 0.6); cursor.ty = H * (0.25 + rnd() * 0.55); }
-  retarget();
-
-  // ---- simulated input scheduler (calm, capped cadence) ----
-  let evtTimer = 0, evtGap = 0.55, shieldPulse = 0;
-  function scheduleEvent(dt) {
-    evtTimer += dt;
-    if (evtTimer >= evtGap) {
-      evtTimer = 0; evtGap = 0.42 + rnd() * 0.75;
-      shieldPulse = 1;                    // a tap was just caught at the shield
-      if (rnd() < 0.62) {
-        // keystroke -> firefly near cursor
-        releaseFirefly(cursor.x + (rnd() - 0.5) * 60, cursor.y + (rnd() - 0.5) * 40);
-      } else {
-        // click -> bloom + retarget
-        bloom(cursor.x, cursor.y);
-        retarget();
+    for (const m of motes) {
+      if (m.cap && !repelling) {
+        cap++; m.capA += 1.3 * dt;
+        const rr = er * m.capF;
+        const tx = hole.x + Math.cos(m.capA) * rr, ty = hole.y + Math.sin(m.capA) * rr;
+        const l = Math.min(1, dt * 9);
+        m.x += (tx - m.x) * l; m.y += (ty - m.y) * l; m.vx = m.vy = 0; continue;
       }
+      const dx = hole.x - m.x, dy = hole.y - m.y;
+      const dist2 = dx * dx + dy * dy + eps2, dist = Math.sqrt(dist2);
+      const nx = dx / dist, ny = dy / dist;
+      if (repelling) {
+        m.cap = false;
+        const outA = BASE_G * 100 / dist2;
+        m.vx -= nx * outA * dt; m.vy -= ny * outA * dt;
+      } else if (dist2 < reach2) {
+        const a = g / dist2 + (boost - 1) * 16;
+        m.vx += nx * a * dt; m.vy += ny * a * dt;               // pull
+        m.vx += -ny * (g / dist2) * 0.12 * dt; m.vy += nx * (g / dist2) * 0.12 * dt; // swirl
+        const prox = Math.max(0, 1 - dist / (er * 4.5));
+        const brake = Math.exp(-prox * 8 * dt);
+        m.vx *= brake; m.vy *= brake;
+        if (dist < er + 40) { m.cap = true; m.capF = rnd(0.16, 0.74);
+          m.capA = Math.atan2(m.y - hole.y, m.x - hole.x); m.vx = m.vy = 0; cap++; continue; }
+      } else {
+        m.vx += rnd(-6, 6) * dt; m.vy += rnd(-6, 6) * dt;
+        m.vx *= Math.exp(-0.5 * dt); m.vy *= Math.exp(-0.5 * dt);
+      }
+      const vmax = repelling ? 2000 : 1400, sp2 = m.vx * m.vx + m.vy * m.vy;
+      if (sp2 > vmax * vmax) { const s = vmax / Math.sqrt(sp2); m.vx *= s; m.vy *= s; }
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      const mm = 6, e = 0.85;
+      if (m.x < mm) { m.x = mm; m.vx = Math.abs(m.vx) * e; } else if (m.x > W - mm) { m.x = W - mm; m.vx = -Math.abs(m.vx) * e; }
+      if (m.y < mm) { m.y = mm; m.vy = Math.abs(m.vy) * e; } else if (m.y > H - mm) { m.y = H - mm; m.vy = -Math.abs(m.vy) * e; }
     }
+    capturedCount = cap;
   }
 
-  // ---- faint, real-looking desktop behind the effects ----
-  function drawDesktop() {
-    // wallpaper: calm dusk gradient
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#243a63');
-    g.addColorStop(0.5, '#2b2c54');
-    g.addColorStop(1, '#3a2a4d');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    // soft wallpaper light
-    const rg = ctx.createRadialGradient(W * 0.7, H * 0.25, 0, W * 0.7, H * 0.25, W * 0.6);
-    rg.addColorStop(0, 'rgba(255,210,160,0.22)'); rg.addColorStop(1, 'rgba(255,210,160,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  function rgba(c, a) { return 'rgba(' + SWATCH[c][0] + ',' + SWATCH[c][1] + ',' + SWATCH[c][2] + ',' + a + ')'; }
 
-    // menu bar
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    ctx.fillRect(0, 0, W, Math.max(16, H * 0.045));
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    roundRect(10, H * 0.016, 46, H * 0.016, 2); ctx.fill();
-    for (let i = 0; i < 4; i++) { roundRect(W - 24 - i * 26, H * 0.016, 14, H * 0.016, 2); ctx.fill(); }
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    const cx = hole.x, cy = hole.y, er = eventR();
 
-    // two app windows — kept crisp and clearly present (your work is still all there)
-    appWindow(W * 0.07, H * 0.16, W * 0.42, H * 0.52, 'rgba(236,240,252,0.20)');
-    appWindow(W * 0.55, H * 0.30, W * 0.36, H * 0.46, 'rgba(236,240,252,0.18)');
-
-    // dock
-    const dw = W * 0.42, dh = Math.max(26, H * 0.075), dx = (W - dw) / 2, dy = H - dh - 8;
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(dx, dy, dw, dh, dh * 0.28); ctx.fill();
-    const icons = 7, pad = dh * 0.18, s = dh - pad * 2, gap = (dw - icons * s) / (icons + 1);
-    // muted, recessive chrome — the glowing orbs stay the only high-energy color on screen
-    const dockCols = ['#b58088', '#bda978', '#86a98e', '#869ec0', '#9b8fb5', '#bf8fa6', '#8fb6c9'];
-    for (let i = 0; i < icons; i++) {
-      ctx.fillStyle = dockCols[i] + 'aa';
-      roundRect(dx + gap + i * (s + gap), dy + pad, s, s, s * 0.26); ctx.fill();
+    // infalling motes (streaks + glow)
+    ctx.lineCap = 'round';
+    for (const m of motes) {
+      if (m.cap) continue;
+      const dx = hole.x - m.x, dy = hole.y - m.y, dist = Math.hypot(dx, dy);
+      const near = Math.max(0, 1 - dist / (er * 6));
+      const r = m.size * (1 + near);
+      if (near > 0.25) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(m.c, 0.5 * near); ctx.lineWidth = r;
+        ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x + dx * 0.18, m.y + dy * 0.18); ctx.stroke();
+      }
+      const gr = r * 2.4, grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, gr);
+      grd.addColorStop(0, rgba(m.c, 0.9)); grd.addColorStop(0.4, rgba(m.c, 0.4)); grd.addColorStop(1, rgba(m.c, 0));
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(m.x, m.y, gr, 0, 6.2832); ctx.fill();
     }
-  }
-  function appWindow(x, y, w, h, fill) {
-    // frosted panel
-    ctx.fillStyle = fill;
-    roundRect(x, y, w, h, 10); ctx.fill();
-    // top highlight + crisp 1px border so it reads as a real, present window
-    const hi = ctx.createLinearGradient(0, y, 0, y + h * 0.5);
-    hi.addColorStop(0, 'rgba(255,255,255,0.12)'); hi.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = hi; roundRect(x, y, w, h, 10); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
-    roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 10); ctx.stroke();
-    // full-color titlebar lights
-    const ly = y + h * 0.06;
-    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => {
-      ctx.fillStyle = c; ctx.beginPath();
-      ctx.arc(x + 16 + i * 14, ly, 3.2, 0, Math.PI * 2); ctx.fill();
-    });
-    // content lines
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    for (let i = 0; i < 6; i++) {
-      const lw = w * (0.4 + (i % 3) * 0.18);
-      roundRect(x + 16, y + h * 0.18 + i * (h * 0.11), lw, 5, 2.5); ctx.fill();
-    }
-  }
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
 
-  // ---- effect drawing: contrast core + additive glow, via cached sprites ----
-  function drawOrb(o, tw) {
-    const rad = o.r * (2.4 + tw * 0.5);
-    ctx.globalAlpha = o.life;
-    // additive glow
+    // shockwave rings
+    for (const p of pulses) {
+      const t = (now - p) / 1.6, rr = er + t * 560, a = (1 - t) * 0.55;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(200,214,255,' + a + ')'; ctx.lineWidth = 3 * (1 - t) + 1;
+      ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 6.2832); ctx.stroke();
+    }
+
+    // lensing halo
     ctx.globalCompositeOperation = 'lighter';
-    const gr = rad * 3.2;
-    ctx.drawImage(glowSprites[o.ci], o.x - gr, o.y - gr, gr * 2, gr * 2);
-    // bright core
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(coreSprites[o.ci], o.x - rad, o.y - rad, rad * 2, rad * 2);
+    let g1 = ctx.createRadialGradient(cx, cy, er, cx, cy, er * 5);
+    g1.addColorStop(0, 'rgba(128,153,255,0.18)'); g1.addColorStop(1, 'rgba(102,128,255,0)');
+    ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(cx, cy, er * 5, 0, 6.2832); ctx.fill();
+
+    // accretion disk
+    const flare = 0.7 + Math.min(0.35, (boost - 1) * 0.01);
+    ctx.globalAlpha = flare;
+    let g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, er * 2.5);
+    g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(0.5, 'rgba(0,0,0,0)');
+    g2.addColorStop(0.58, 'rgba(255,140,38,0.95)'); g2.addColorStop(0.66, 'rgba(255,217,102,0.8)');
+    g2.addColorStop(0.82, 'rgba(128,179,255,0.28)'); g2.addColorStop(1, 'rgba(128,179,255,0)');
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(cx, cy, er * 2.5, 0, 6.2832); ctx.fill();
     ctx.globalAlpha = 1;
-  }
 
-  function step(dt) {
-    shieldPulse = Math.max(0, shieldPulse - dt * 2.4);   // fades the "caught" shimmer
-    // cursor easing
-    cursor.t += dt;
-    if (cursor.t > 2.6) { cursor.t = 0; retarget(); }
-    cursor.x += (cursor.tx - cursor.x) * Math.min(1, dt * 1.6);
-    cursor.y += (cursor.ty - cursor.y) * Math.min(1, dt * 1.6);
-
-    scheduleEvent(dt);
-
-    const attract = 60;
-    for (let i = orbs.length - 1; i >= 0; i--) {
-      const o = orbs[i];
-      o.phase += dt * o.twk * 2.0;
-      // brownian wander
-      o.vx += (rnd() - 0.5) * 14 * dt;
-      o.vy += (rnd() - 0.5) * 14 * dt;
-      if (!o.ambient) o.vy -= 6 * dt; // fireflies rise
-      // gentle gather toward cursor when near
-      const dx = cursor.x - o.x, dy = cursor.y - o.y;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < 160 * 160) {
-        const d = Math.sqrt(d2) || 1;
-        o.vx += (dx / d) * attract * dt;
-        o.vy += (dy / d) * attract * dt;
-      }
-      // damping keeps it slow & calm
-      const damp = Math.exp(-0.7 * dt);
-      o.vx *= damp; o.vy *= damp;
-      o.x += o.vx * dt; o.y += o.vy * dt;
-
-      if (o.ambient) {
-        // toroidal wrap
-        if (o.x < -20) o.x = W + 20; if (o.x > W + 20) o.x = -20;
-        if (o.y < -20) o.y = H + 20; if (o.y > H + 20) o.y = -20;
-      } else {
-        o.life -= dt * 0.12;
-        if (o.life <= 0 || o.y < -30) orbs.splice(i, 1);
-      }
-    }
-
-    for (let i = blooms.length - 1; i >= 0; i--) {
-      const bl = blooms[i];
-      bl.r += (bl.maxR - bl.r) * Math.min(1, dt * 2.2);
-      bl.life -= dt * 0.8;
-      if (bl.life <= 0) blooms.splice(i, 1);
-    }
-  }
-
-  function draw() {
-    drawDesktop();
-
-    // blooms (soft expanding rings)
+    // event horizon + photon ring
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(cx, cy, er, 0, 6.2832); ctx.fill();
     ctx.globalCompositeOperation = 'lighter';
-    for (const bl of blooms) {
-      const [r, g, b] = PALETTE[bl.ci];
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = `rgba(${r},${g},${b},${0.5 * bl.life})`;
-      ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2); ctx.stroke();
-      const grd = ctx.createRadialGradient(bl.x, bl.y, bl.r * 0.5, bl.x, bl.y, bl.r);
-      grd.addColorStop(0, `rgba(${r},${g},${b},0)`);
-      grd.addColorStop(0.8, `rgba(${r},${g},${b},${0.12 * bl.life})`);
-      grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(bl.x, bl.y, bl.r, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(255,230,191,0.95)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(cx, cy, er * 1.04, 0, 6.2832); ctx.stroke();
 
-    // orbs
-    for (const o of orbs) {
-      const tw = 0.6 + 0.4 * Math.sin(o.phase);
-      drawOrb(o, tw);
+    // captured core (glowing churn on top)
+    for (const m of motes) {
+      if (!m.cap) continue;
+      const gr = m.size * 2.6, grd = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, gr);
+      grd.addColorStop(0, rgba(m.c, 0.95)); grd.addColorStop(0.4, rgba(m.c, 0.45)); grd.addColorStop(1, rgba(m.c, 0));
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(m.x, m.y, gr, 0, 6.2832); ctx.fill();
     }
-    ctx.globalCompositeOperation = 'source-over';
-
-    // the gathering cursor (a soft glowing dot), from the cached sprite
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.drawImage(cursorSprite, cursor.x - 16, cursor.y - 16, 32, 32);
-
-    // interception cue: when input is "caught", the shield edge shimmers softly (sub-second, calm)
-    if (shieldPulse > 0.01) {
-      ctx.strokeStyle = `rgba(156,224,255,${0.22 * shieldPulse})`;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(156,224,255,0.8)';
-      ctx.shadowBlur = 20 * shieldPulse;
-      roundRect(2, 2, W - 4, H - 4, 11); ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   }
 
-  // a single still frame (used for prefers-reduced-motion, and to repaint after resize)
-  function drawStill() {
-    drawDesktop();
-    for (const o of orbs) drawOrb(o, 0.8);
-  }
-
-  // ---- let visitors interact too: pointer = cursor, click = bloom ----
-  canvas.addEventListener('pointermove', (e) => {
-    const r = canvas.getBoundingClientRect();
-    cursor.tx = e.clientX - r.left; cursor.ty = e.clientY - r.top; cursor.t = 0;
-  });
-  canvas.addEventListener('pointerdown', (e) => {
-    const r = canvas.getBoundingClientRect();
-    shieldPulse = 1;
-    bloom(e.clientX - r.left, e.clientY - r.top);
-    for (let i = 0; i < 4; i++) releaseFirefly(e.clientX - r.left, e.clientY - r.top);
-  });
-
-  let last = 0, rafId = null;
   function frame(t) {
-    const dt = Math.min(0.05, last ? (t - last) / 1000 : 0.016);
-    last = t;
-    step(dt);
-    draw();
-    rafId = requestAnimationFrame(frame);
-  }
-  function start() {
-    if (rafId !== null) return; // a loop already exists — never double up
-    last = 0;
-    rafId = requestAnimationFrame(frame);
-  }
-  function stop() {
-    if (rafId === null) return;
-    cancelAnimationFrame(rafId);
-    rafId = null;
+    const now = t / 1000, dt = Math.min(0.05, last ? now - last : 0.016); last = now;
+    step(dt, now); draw(now);
+    raf = requestAnimationFrame(frame);
   }
 
-  ready = true;   // sprites + orbs now exist; resize() may safely repaint the still frame
-
-  if (reduce) {
-    // single calm still frame, repainted on resize via resize()'s reduce branch
-    drawStill();
-  } else {
-    // pause when offscreen to save battery
-    const vis = new IntersectionObserver((es) => {
-      es.forEach(en => {
-        if (en.isIntersecting) start();
-        else stop();
-      });
-    }, { threshold: 0.05 });
-    vis.observe(canvas);
-    start();
+  function open() {
+    resize(); seed();
+    target.x = hole.x = W / 2; target.y = hole.y = H / 2; lastMove = performance.now() / 1000;
+    overlay.classList.add('on');
+    document.body.style.overflow = 'hidden';
+    running = true; last = 0;
+    if (!reduce) raf = requestAnimationFrame(frame); else draw(0);
+    // focus so keydown lands here; also blur the button
+    canvas.setAttribute('tabindex', '-1'); canvas.focus({ preventScroll: true });
   }
+  function close() {
+    overlay.classList.remove('on');
+    document.body.style.overflow = '';
+    running = false; holding = false; boost = 1;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    openBtn.focus({ preventScroll: true });
+  }
+
+  openBtn.addEventListener('click', open);
+  if (closeBtn) closeBtn.addEventListener('click', close);
+
+  const movePt = (x, y) => { target.x = x; target.y = y; lastMove = performance.now() / 1000; };
+  canvas.addEventListener('pointermove', e => movePt(e.clientX, e.clientY));
+  canvas.addEventListener('pointerdown', e => { movePt(e.clientX, e.clientY); holding = true; boost = 100; canvas.setPointerCapture?.(e.pointerId); });
+  window.addEventListener('pointerup', () => { holding = false; });
+
+  // any key = release burst; Esc = close (handled first)
+  window.addEventListener('keydown', e => {
+    if (!running) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    e.preventDefault();
+    repelUntil = performance.now() / 1000 + 0.4;
+    if (pulses.length < 6) pulses.push(performance.now() / 1000);
+  });
+  window.addEventListener('resize', () => { if (running) resize(); });
 })();
 </script>
 </body>

@@ -24,6 +24,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let license = LicenseManager()
     private var demoMax: TimeInterval?   // demo-only watchdog backstop override
     private var settingsMenu: NSMenu?
+    private var mainMenu: NSMenu?                 // top status menu; dynamic labels refreshed on open
+    private var licenseStatusItem: NSMenuItem?    // "Free trial — N days left" — recomputed each open
+    private var accessibilityStatusItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // no Dock icon; required for tapCreate to work
@@ -187,7 +190,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.title = "🛡️"
-        let menu = NSMenu()
+        let menu = NSMenu(); menu.delegate = self   // refresh dynamic labels on each open
         menu.addItem(NSMenuItem(title: "Enter Kid Mode (⌃⌥⌘K)", action: #selector(menuEnter), keyEquivalent: ""))
         let settingsItem = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
         let sm = NSMenu(); sm.delegate = self      // rebuilt on open (always reflects current state)
@@ -198,6 +201,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let licenseStatus = NSMenuItem(title: license.statusLine, action: nil, keyEquivalent: "")
         licenseStatus.isEnabled = false
         menu.addItem(licenseStatus)
+        licenseStatusItem = licenseStatus
         if case .licensed = license.entitlement {} else {
             menu.addItem(NSMenuItem(title: "Enter License Key…", action: #selector(enterLicense), keyEquivalent: ""))
             menu.addItem(NSMenuItem(title: "Buy kiddyproof…", action: #selector(buyLicense), keyEquivalent: ""))
@@ -206,6 +210,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let status = NSMenuItem(title: accessibilityStatusLine(), action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
+        accessibilityStatusItem = status
         menu.addItem(NSMenuItem(title: "Open Accessibility Settings…", action: #selector(openSettings), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Welcome & Safety Guide…", action: #selector(showOnboarding), keyEquivalent: ""))
         if UpdaterSupport.isAvailable {
@@ -214,6 +219,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
         for i in menu.items { i.target = self }
+        mainMenu = menu
         item.menu = menu
         statusItem = item
     }
@@ -242,6 +248,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Settings submenu (rebuilt each time it opens, so it always reflects state)
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu === mainMenu {
+            // The menu-bar app stays running for days; the top menu is built once, so its
+            // "Free trial — N days left" / accessibility labels would freeze at launch-time
+            // values. Recompute them every time the menu opens.
+            licenseStatusItem?.title = license.statusLine
+            accessibilityStatusItem?.title = accessibilityStatusLine()
+            return
+        }
         guard menu === settingsMenu else { return }
         menu.removeAllItems()
         // Parent-only: settings are unreachable while kid mode is active (this disablement

@@ -71,8 +71,7 @@ final class KidAudio {
         engine.connect(reverb, to: engine.mainMixerNode, format: fmt)
         engine.connect(drone, to: engine.mainMixerNode, format: fmt)   // bed stays dry & clean
         engine.connect(vacuum, to: wetMixer, format: fmt)
-        engine.connect(engine.mainMixerNode, to: limiter, format: fmt) // everything passes the
-        engine.connect(limiter, to: engine.outputNode, format: fmt)    // limiter before the device
+        connectOutput()                                                // mix → limiter → device
         for _ in 0..<voiceCount {
             let node = AVAudioPlayerNode()
             engine.attach(node)
@@ -85,6 +84,17 @@ final class KidAudio {
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in self?.reprime() }
         engine.prepare()
+    }
+
+    // The final leg to the device MUST use the output hardware format. Hardcoding 48 kHz
+    // here made engine.start() throw on any 44.1 kHz output (built-in speakers, most
+    // Bluetooth) → total silence. mainMixerNode resamples the 48 kHz synthesis to whatever
+    // the current device wants; re-run this whenever the output device changes.
+    private func connectOutput() {
+        let hw = engine.outputNode.outputFormat(forBus: 0)
+        let outFmt = (hw.sampleRate > 0 && hw.channelCount > 0) ? hw : fmt
+        engine.connect(engine.mainMixerNode, to: limiter, format: outFmt)
+        engine.connect(limiter, to: engine.outputNode, format: outFmt)
     }
 
     private func startEngine() {
@@ -107,6 +117,7 @@ final class KidAudio {
         guard enabled else { needsReprime = true; return }
         for v in voices { v.stop() }
         drone.stop(); vacuum.stop()
+        connectOutput()   // the new device may run at a different sample rate
         startEngine()
         for v in voices where engine.isRunning { v.play() }
         startBeds()
@@ -118,9 +129,13 @@ final class KidAudio {
         enabled = on
         engine.mainMixerNode.outputVolume = on ? volume : 0   // mutes everything incl. beds
         if on {
-            startEngine()
-            if !primed || needsReprime {
+            if needsReprime {
                 needsReprime = false
+                connectOutput()   // device changed while paused → match the new hardware format
+                primed = false    // force a fresh (re)start of the players below
+            }
+            startEngine()
+            if !primed {
                 for v in voices { v.stop() }
                 drone.stop(); vacuum.stop()
                 for v in voices where engine.isRunning { v.play() }

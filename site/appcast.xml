@@ -9,6 +9,23 @@
     <description>Release feed for the kiddyproof macOS app.</description>
     <language>en</language>
     <item>
+      <title>1.0.2</title>
+      <description><![CDATA[
+        <h3>Bug fixes</h3>
+        <p>Audio now plays reliably on all output devices, and the menu-bar status
+        refreshes correctly during long sessions.</p>
+      ]]></description>
+      <pubDate>Mon, 14 Sep 2026 21:15:00 +0000</pubDate>
+      <sparkle:version>202609141613</sparkle:version>
+      <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/brothaakhee/kiddyproof-releases/releases/download/v1.0.2/kiddyproof-1.0.2.dmg"
+        sparkle:edSignature="mWNjwRsG8ZPTLjj9mdQAOA6Cpk0tqP1RVBHfewNNSHDPW/+1DcrUSvk/n3UCZZ5LudW/X+42f5EKjNrTyt4sDw=="
+        length="2777562"
+        type="application/octet-stream" />
+    </item>
+    <item>
       <title>1.0.1</title>
       <description><![CDATA[
         <p>Small under-the-hood improvements.</p>

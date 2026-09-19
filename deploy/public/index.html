@@ -13,6 +13,18 @@
      below. Time-on-page + visitors are tracked automatically. -->
 <script defer src="https://umami-production-c71b.up.railway.app/script.js"
         data-website-id="4f9a7d9a-5c29-42a4-a347-41dc9a25a3ea"></script>
+<!-- Meta Pixel (kiddyproof — shared landrush dataset, distinct KiddyproofDownload event) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','1594743668996830');fbq('track','PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1594743668996830&ev=PageView&noscript=1" alt=""/></noscript>
+<!-- End Meta Pixel -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="kiddyproof" />
 <meta property="og:title" content="kiddyproof — hand over the keyboard, keep your work" />
@@ -1038,7 +1050,11 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
   // Downloads: only real DMG links count. (The footer "Download" is an
   // in-page #download scroll anchor, not a download — excluded on purpose.)
   document.querySelectorAll('a[href*="releases"], a[href*=".dmg"]').forEach(a => {
-    a.addEventListener('click', () => track('download', { where: a.closest('nav') ? 'nav' : 'body' }));
+    a.addEventListener('click', () => {
+      track('download', { where: a.closest('nav') ? 'nav' : 'body' });
+      // Meta ad conversion: standard Lead (optimizable now) + a kiddyproof-specific custom event.
+      try { window.fbq && (fbq('track', 'Lead'), fbq('trackCustom', 'KiddyproofDownload')); } catch (e) {}
+    });
   });
   // Live demo: the "Try it here" button.
   const tb = document.getElementById('try-btn');

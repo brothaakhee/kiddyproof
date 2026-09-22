@@ -734,6 +734,16 @@ section { position: relative; }
     linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
 }
 .cta-card .minicat { width: 64px; height: 64px; margin: 0 auto 22px; display: block; filter: drop-shadow(0 0 18px rgba(255,200,115,0.4)); }
+/* Inline links in the closing card had no rule and fell back to the browser's
+   default blue — jarring in this palette, and it is the price that sits here. */
+.cta-card p a {
+  color: var(--amber);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 200, 115, 0.45);
+  text-underline-offset: 3px;
+  transition: color .2s ease, text-decoration-color .2s ease;
+}
+.cta-card p a:hover { color: var(--gold); text-decoration-color: var(--gold); }
 .cta h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.1rem, 4.4vw, 3.3rem); letter-spacing: -0.025em; line-height: 1.08; margin-bottom: 18px; }
 .cta h2 em { font-style: italic; color: var(--amber); }
 .cta p { color: var(--ink-soft); font-size: 1.12rem; max-width: 46ch; margin: 0 auto 34px; }

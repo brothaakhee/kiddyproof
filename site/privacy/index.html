@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — kiddyproof</title>
+<meta name="description" content="What kiddyproof collects, what it doesn't, and where the few bits of data go. The Mac app has no accounts, no telemetry, and validates licenses offline." />
+<link rel="canonical" href="https://kiddyproof.app/privacy" />
+<meta name="robots" content="index,follow" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="kiddyproof" />
+<meta property="og:title" content="Privacy Policy — kiddyproof" />
+<meta property="og:description" content="What kiddyproof collects, what it doesn't, and where the few bits of data go." />
+<meta property="og:url" content="https://kiddyproof.app/privacy" />
+<meta property="og:image" content="https://kiddyproof.app/og.png" />
+
+<!-- Analytics: self-hosted, cookieless Umami only. The Meta Pixel that runs on the
+     marketing pages is deliberately NOT loaded here — a privacy policy shouldn't
+     hand your visit to an ad network while you read about ad networks. -->
+<script defer src="https://umami-production-c71b.up.railway.app/script.js"
+        data-website-id="4f9a7d9a-5c29-42a4-a347-41dc9a25a3ea"></script>
+
+<link rel="stylesheet" href="/legal.css" />
+</head>
+<body>
+
+<main class="wrap">
+  <a class="back" href="/">&larr; kiddyproof.app</a>
+
+  <header class="masthead">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: 22 September 2026</p>
+  </header>
+
+  <div class="tldr">
+    <h2>The short version</h2>
+    <ul>
+      <li><strong>The app collects nothing.</strong> No account, no sign-in, no analytics, no telemetry. Your license key is checked on your own Mac, offline.</li>
+      <li><strong>Keystrokes are never recorded.</strong> kiddyproof blocks input while kid mode is on. Keys are read in memory only, to draw a letter on screen and to spot the exit chord — then discarded.</li>
+      <li><strong>The app makes one automatic network request:</strong> a check for updates. You can switch it off.</li>
+      <li><strong>This website is a different story.</strong> It runs privacy-friendly analytics and a Meta (Facebook) advertising pixel. Details in §4.</li>
+      <li><strong>We never see your card.</strong> Purchases run through Lemon Squeezy, who act as the seller of record.</li>
+    </ul>
+  </div>
+
+  <nav class="toc" aria-label="Contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#app">The Mac app</a></li>
+      <li><a href="#accessibility">Accessibility and your keystrokes</a></li>
+      <li><a href="#website">This website</a></li>
+      <li><a href="#purchases">Purchases</a></li>
+      <li><a href="#email">Email</a></li>
+      <li><a href="#children">Children's privacy</a></li>
+      <li><a href="#retention">How long we keep things</a></li>
+      <li><a href="#rights">Your rights</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#changes">Changes</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+  </nav>
+
+  <section id="who">
+    <h2>1. Who we are</h2>
+    <p>kiddyproof is a macOS app made and operated by <strong>Hammad Hai</strong>, an individual trading as &ldquo;kiddyproof&rdquo;, based in Texas, United States. In this policy, &ldquo;we&rdquo; and &ldquo;us&rdquo; mean that person, and &ldquo;you&rdquo; means whoever is using the app or this site.</p>
+    <p>For anything privacy-related, write to <a href="mailto:hello@kiddyproof.app?subject=Privacy%20question">hello@kiddyproof.app</a>. A real person reads it.</p>
+  </section>
+
+  <section id="app">
+    <h2>2. The Mac app</h2>
+    <p>kiddyproof has no user accounts, and no server watches it run. There is nothing to sign into, and nothing about how you use the app is sent anywhere. It contains no analytics or telemetry code of any kind. The single exception to &ldquo;no server&rdquo; is a one-time activation step in your browser when you buy, described in <a href="#purchases">&sect;5</a>.</p>
+
+    <h3>What is stored, and where</h3>
+    <p>Everything below lives on your own Mac. None of it is transmitted to us.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>What</th><th>Where</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>License key</td><td>macOS user defaults</td><td>So you only enter it once. It is validated locally, offline &mdash; it is never sent to us or anyone else.</td></tr>
+          <tr><td>First-launch date</td><td>User defaults, plus a file in Application&nbsp;Support</td><td>To work out how much of the free trial is left. It is a date, nothing more.</td></tr>
+          <tr><td>Your settings</td><td>macOS user defaults</td><td>Chosen scenes, audio and behavior preferences.</td></tr>
+          <tr><td>A &ldquo;running&rdquo; marker file</td><td>Application&nbsp;Support</td><td>Written at launch and deleted on a clean quit, so the app can tell it ended badly last time.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Deleting the app and its Application&nbsp;Support folder removes all of it. Nothing survives anywhere else, because there is nowhere else.</p>
+
+    <h3>The one automatic network request</h3>
+    <p>kiddyproof checks for updates using <a href="https://sparkle-project.org/" rel="noopener">Sparkle</a>, the standard updater for Mac apps distributed outside the App Store. It periodically fetches <code>https://kiddyproof.app/appcast.xml</code>.</p>
+    <p>Like any web request, that reveals to the server your <strong>IP address</strong> and a <strong>user-agent string</strong> containing the kiddyproof version and your macOS version. It does not include your license key, your name, or anything about how you use the app. We use it only to serve you the right update; we do not build profiles from it.</p>
+    <p>You can turn it off in the app's settings, or by unticking automatic update checks in the updater dialog. The app is fully functional with updates disabled &mdash; you will just need to download new versions yourself.</p>
+
+    <h3>Crash reports</h3>
+    <p>Nothing is reported automatically. If the app notices it did not shut down cleanly, it offers to open a pre-filled email in your mail client. Nothing is sent unless you choose to send it, and you can read and edit every word first. The pre-filled part contains only the kiddyproof version and your macOS version.</p>
+  </section>
+
+  <section id="accessibility">
+    <h2>3. Accessibility permission and your keystrokes</h2>
+    <p>This is the part people most want a straight answer on, so here it is in detail.</p>
+    <p>To stop a toddler from closing your windows or sending half-written messages, kiddyproof needs macOS <strong>Accessibility</strong> permission. That permission lets it install a system-level event tap that <em>swallows</em> keyboard and mouse events while kid mode is armed, so the apps behind it never receive them.</p>
+    <p>It is a suppressing tap, not a listening one. While kid mode is armed, the app reads a pressed key in memory for exactly two purposes:</p>
+    <ul>
+      <li>to draw the corresponding letter or digit on screen, which is most of the fun; and</li>
+      <li>to recognize the exit chord that returns control to you.</li>
+    </ul>
+    <p>The value is used in that instant and discarded. <strong>Keystrokes are never written to disk, never logged, never buffered, and never transmitted.</strong> There is no code in kiddyproof that could send them anywhere, because the app has no network client beyond the updater described above.</p>
+    <p>When kid mode is off, the tap passes everything straight through untouched except the single chord that arms the app.</p>
+  </section>
+
+  <section id="website">
+    <h2>4. This website</h2>
+    <p>kiddyproof.app is a marketing site, and unlike the app it does use analytics and advertising tools. Being straight about that is the point of this section.</p>
+
+    <h3>Umami analytics</h3>
+    <p>We run <a href="https://umami.is/" rel="noopener">Umami</a> on our own server. It is cookieless, it does not track you across other websites, and it does not collect personal information. It records aggregate things like page views, approximate country, referring site, browser and device type. We use it to see whether anyone is actually visiting.</p>
+
+    <h3>Meta (Facebook) pixel</h3>
+    <p>Our marketing pages &mdash; the home page and the buy page &mdash; load the <strong>Meta Pixel</strong> so we can tell whether our Facebook and Instagram ads are working. It records page views and a few actions such as starting a download or beginning checkout, and it <strong>sets cookies and shares that activity with Meta</strong>, who may connect it to your Facebook or Instagram account and use it for ad targeting and measurement. Meta processes that data under <a href="https://www.facebook.com/privacy/policy/" rel="noopener">its own privacy policy</a>, which we do not control.</p>
+    <p>We have deliberately left the pixel off this page and off the terms page.</p>
+    <p>If you would rather not be measured this way, any of these work: use a content blocker or a browser that blocks trackers by default; turn off <a href="https://www.facebook.com/off_facebook_activity/" rel="noopener">Off-Facebook Activity</a> in your Meta account; or use the opt-outs at <a href="https://optout.aboutads.info/" rel="noopener">optout.aboutads.info</a>. Blocking it changes nothing about how the site or the app works.</p>
+
+    <h3>Hosting and server logs</h3>
+    <p>The site is hosted on <a href="https://railway.com/" rel="noopener">Railway</a> (United States) with DNS through <a href="https://www.cloudflare.com/" rel="noopener">Cloudflare</a>. Like every web host, they process requests and may keep short-lived logs containing IP addresses for security and reliability. We do not mine those logs.</p>
+  </section>
+
+  <section id="purchases">
+    <h2>5. Purchases</h2>
+    <p>Licenses are sold through <strong>Lemon Squeezy</strong>, who act as the merchant of record. That means they are the seller for the transaction, and they handle payment processing, fraud checks and sales tax or VAT.</p>
+    <p><strong>We never see or store your card details.</strong> Your payment information goes to Lemon Squeezy and their payment providers, never to us, and is handled under <a href="https://www.lemonsqueezy.com/privacy" rel="noopener">their privacy policy</a>.</p>
+    <p>What reaches us is the order record: your email address, the license key issued, and basic order details such as the amount, date and the country used for tax. We use these to deliver your key and to help you if something goes wrong.</p>
+
+    <h3>Activating your key</h3>
+    <p>Lemon Squeezy issues keys in its own format, so after checkout you are sent to an activation page on our server, which swaps your order key for the key the app actually reads. That one page is the only server we operate that touches your purchase.</p>
+    <p>Here is exactly what happens. Your order key is sent to that page, which passes it to the Lemon Squeezy API to confirm the purchase is genuine. Lemon Squeezy replies with your email address and order details, your email is shown back to you so you can see the license is yours, and a signed app key is generated and handed to kiddyproof.</p>
+    <p><strong>The activation service stores nothing.</strong> It keeps no database and writes no records; it holds your key and email in memory only for the seconds it takes to answer, then forgets them. Its logs record an order number so we can help if activation fails &mdash; never your key, and never your email. Once you have your app key, the page has no further role: the app verifies that key offline, forever, without contacting anything.</p>
+  </section>
+
+  <section id="email">
+    <h2>6. Email</h2>
+    <p>Mail to <code>hello@kiddyproof.app</code> is forwarded by <a href="https://developers.cloudflare.com/email-routing/" rel="noopener">Cloudflare Email Routing</a> to a personal mailbox. Your message, your address and anything you attach are handled by Cloudflare in transit and then by that mail provider. We keep correspondence for as long as it is useful for support, and we do not add you to any marketing list &mdash; there isn't one.</p>
+  </section>
+
+  <section id="children">
+    <h2>7. Children's privacy</h2>
+    <p>kiddyproof is made <em>for</em> small children to bash away at, but it is sold to and set up by adults. It is not directed at children as a commercial service, and it has no sign-up, no profile, no chat, no social features and no advertising inside the app.</p>
+    <p><strong>We do not knowingly collect any personal information from anyone, including children.</strong> The app has no mechanism to do so: there is no account, no telemetry, and no server that receives anything. A child using kiddyproof produces no data that leaves the Mac.</p>
+    <p>This website, by contrast, is aimed at parents, and children should not be buying software. If you believe a child has sent us personal information through the site or by email, write to <a href="mailto:hello@kiddyproof.app?subject=Children%27s%20privacy">hello@kiddyproof.app</a> and we will delete it.</p>
+  </section>
+
+  <section id="retention">
+    <h2>8. How long we keep things</h2>
+    <ul>
+      <li><strong>On-device data</strong> stays until you delete the app and its Application Support folder. We cannot reach it and cannot delete it for you.</li>
+      <li><strong>Order records</strong> are retained by Lemon Squeezy for as long as tax and accounting rules require, typically several years.</li>
+      <li><strong>Analytics</strong> is aggregate and retained on a rolling basis; it is not tied to an identifiable person.</li>
+      <li><strong>Emails</strong> are kept while they are useful for support, then deleted.</li>
+    </ul>
+  </section>
+
+  <section id="rights">
+    <h2>9. Your rights</h2>
+    <p>Depending on where you live &mdash; under the Texas Data Privacy and Security Act, the California Consumer Privacy Act, the UK GDPR or the EU GDPR &mdash; you may have the right to access the personal data we hold about you, to correct or delete it, to obtain a copy, and to object to certain processing. Where GDPR applies, our lawful bases are performing our contract with you (delivering and supporting your license) and our legitimate interests (understanding whether our advertising works).</p>
+    <p>In practice we hold very little: an order record and any emails you have sent us. Write to <a href="mailto:hello@kiddyproof.app?subject=Data%20request">hello@kiddyproof.app</a> and we will action it within 30 days, free of charge. We will ask you to confirm the email address used for the purchase, so we do not hand your order to someone else.</p>
+    <p><strong>We do not sell your personal information</strong>, and we never have. Sharing ad-measurement data with Meta as described in §4 may count as &ldquo;sharing for cross-context behavioral advertising&rdquo; under California law; the opt-outs in that section stop it.</p>
+    <p>If you are in the UK or EU and think we have handled your data badly, you may complain to your national data protection authority.</p>
+  </section>
+
+  <section id="security">
+    <h2>10. Security</h2>
+    <p>The app is signed with an Apple Developer ID and notarised by Apple, so macOS can verify it has not been tampered with. Updates are additionally verified against a cryptographic signature before installation, which means a hijacked update feed cannot install modified software on your Mac. This site is served over HTTPS.</p>
+    <p>No system is perfect, and we cannot promise absolute security &mdash; but the honest mitigation here is architectural: we hold almost no data, so there is almost nothing to lose.</p>
+  </section>
+
+  <section id="changes">
+    <h2>11. Changes to this policy</h2>
+    <p>If this policy changes, the date at the top changes with it. If a change is significant &mdash; adding a new tracker, say, or a new category of collected data &mdash; we will say so plainly on this page rather than quietly editing it.</p>
+  </section>
+
+  <section id="contact">
+    <h2>12. Contact</h2>
+    <p>Hammad Hai, trading as kiddyproof &mdash; Texas, United States.<br/>
+    <a href="mailto:hello@kiddyproof.app?subject=Privacy%20question">hello@kiddyproof.app</a></p>
+  </section>
+
+  <div class="foot">
+    <nav class="foot-nav">
+      <a href="/">Home</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/buy">Buy a license</a>
+    </nav>
+    <span>&copy; 2026 kiddyproof</span>
+  </div>
+</main>
+
+</body>
+</html>

@@ -52,36 +52,70 @@ final class LicenseTests: XCTestCase {
         XCTAssertNil(License.verify(key: "KIDDY.!!!.???", publicKeyB64: pubB64))
     }
 
+    // Trial math is exercised against an explicit trialDays so these stay
+    // meaningful whichever way the paywall switch is set in License.swift.
     func testTrialCountsDown() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
-        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: start), License.trialDays)
+        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: start, trialDays: 3), 3)
+        let day1 = start.addingTimeInterval(86_400 + 60)
+        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: day1, trialDays: 3), 2)
         let day3 = start.addingTimeInterval(3 * 86_400 + 60)
-        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: day3), License.trialDays - 3)
-        let after = start.addingTimeInterval(Double(License.trialDays) * 86_400 + 60)
-        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: after), 0)
+        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: day3, trialDays: 3), 0)
     }
 
     func testForwardDatedFirstLaunchClamped() {
         // A first-launch date in the future must not grant extra days.
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let future = now.addingTimeInterval(90 * 86_400)
-        XCTAssertEqual(License.trialDaysLeft(firstLaunch: future, now: now), License.trialDays)
+        XCTAssertEqual(License.trialDaysLeft(firstLaunch: future, now: now, trialDays: 3), 3)
+    }
+
+    // MARK: Hard paywall (trialDays == 0)
+
+    func testHardPaywallGrantsNoTrialOnFirstLaunch() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        XCTAssertEqual(License.trialDaysLeft(firstLaunch: start, now: start, trialDays: 0), 0)
+        XCTAssertEqual(License.entitlement(licenseKey: nil, firstLaunch: start, now: start,
+                                           publicKeyB64: pubB64, trialDays: 0), .expired)
+    }
+
+    func testHardPaywallStillHonoursAValidKey() throws {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let key = try makeKey()
+        XCTAssertEqual(License.entitlement(licenseKey: key, firstLaunch: start, now: start,
+                                           publicKeyB64: pubB64, trialDays: 0),
+                       .licensed(email: "kid@example.com"))
+    }
+
+    func testHardPaywallRejectsInvalidKeyWithNoTrialFallback() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        XCTAssertEqual(License.entitlement(licenseKey: "KIDDY.bad.key", firstLaunch: start,
+                                           now: start, publicKeyB64: pubB64, trialDays: 0),
+                       .expired)
+    }
+
+    // Guards the shipped configuration itself: this branch must ship with the
+    // paywall on. Flipping trialDays back to a positive number should fail here
+    // as a deliberate reminder to update the site and Terms copy too.
+    func testShippedBuildHasPaywallEnabled() {
+        XCTAssertEqual(License.trialDays, 0)
+        XCTAssertFalse(License.offersTrial)
     }
 
     func testEntitlementPrecedence() throws {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
-        let lapsed = start.addingTimeInterval(Double(License.trialDays + 5) * 86_400)
+        let lapsed = start.addingTimeInterval(8 * 86_400)
         // expired without key
         XCTAssertEqual(License.entitlement(licenseKey: nil, firstLaunch: start, now: lapsed,
-                                           publicKeyB64: pubB64), .expired)
+                                           publicKeyB64: pubB64, trialDays: 3), .expired)
         // licensed overrides lapsed trial
         let key = try makeKey()
         XCTAssertEqual(License.entitlement(licenseKey: key, firstLaunch: start, now: lapsed,
-                                           publicKeyB64: pubB64),
+                                           publicKeyB64: pubB64, trialDays: 3),
                        .licensed(email: "kid@example.com"))
-        // invalid key falls back to trial state
+        // invalid key falls back to trial state while a trial is on offer
         XCTAssertEqual(License.entitlement(licenseKey: "KIDDY.bad.key", firstLaunch: start,
-                                           now: start, publicKeyB64: pubB64),
-                       .trial(daysLeft: License.trialDays))
+                                           now: start, publicKeyB64: pubB64, trialDays: 3),
+                       .trial(daysLeft: 3))
     }
 }

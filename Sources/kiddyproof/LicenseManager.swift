@@ -53,7 +53,8 @@ final class LicenseManager {
         switch entitlement {
         case .licensed: return "Licensed ✓"
         case .trial(let d): return "Free trial — \(d) day\(d == 1 ? "" : "s") left"
-        case .expired: return "Trial ended — license required"
+        case .expired: return License.offersTrial ? "Trial ended — license required"
+                                                  : "License required"
         }
     }
 

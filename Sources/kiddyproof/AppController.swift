@@ -423,7 +423,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // everything else (menu, settings, onboarding) stays freely usable.
         if case .expired = license.entitlement {
             guard license.promptForLicense(
-                reason: "Your \(License.trialDays)-day free trial has ended. Kid mode needs a license to start.")
+                reason: License.offersTrial
+                    ? "Your \(License.trialDays)-day free trial has ended. Kid mode needs a license to start."
+                    : "Kid mode needs a license to start.")
             else { return }
         }
 

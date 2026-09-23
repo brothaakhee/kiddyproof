@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Activate kiddyproof</title>
+<meta name="robots" content="noindex" />
+<!-- The activation service is a Node app on its own host; the site is static.
+     This page is the short, memorable address the app's own dialog tells people
+     to visit ("Go to kiddyproof.app/activate"), and it forwards them there.
+     The JS hop is what preserves ?checkout_id= / ?k= — a meta refresh cannot —
+     so the meta refresh below is only the no-JS fallback to the paste-your-key
+     form, which is exactly what someone arriving with no query string wants. -->
+<meta http-equiv="refresh" content="1; url=https://activate.kiddyproof.app/activate" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/legal.css" />
+<script>
+  location.replace('https://activate.kiddyproof.app/activate' + location.search);
+</script>
+</head>
+<body>
+<main class="wrap">
+  <a class="back" href="/">&larr; kiddyproof.app</a>
+  <header class="masthead">
+    <h1>Activating&hellip;</h1>
+  </header>
+  <p>Taking you to your licence. If nothing happens,
+     <a href="https://activate.kiddyproof.app/activate">open the activation page</a>.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "kiddyproof-activate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exchanges a Creem purchase for a signed kiddyproof app key.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "verify-key": "bash ./verify-key.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

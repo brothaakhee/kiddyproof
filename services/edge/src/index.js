@@ -24,6 +24,9 @@
 //   blob12  sparkle              '1' if the UA is Sparkle's exact shape
 //   double1 1
 
+import { Throttle, throttle } from './throttle.js';
+export { Throttle };
+
 const GITHUB_LATEST =
   'https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg';
 const SITE = 'https://kiddyproof.app';
@@ -36,7 +39,7 @@ const BOT_RE =
   /bot|crawl|spider|slurp|scan|monitor|fetch|curl|wget|python|go-http|java\/|okhttp|libwww|httpclient|headless|phantom|facebookexternalhit|twitterbot|slackbot|discordbot|whatsapp|telegram|preview|validator|archive/i;
 
 // Deliberately permissive: the provider does the real validation on send.
-// This only keeps obvious garbage out of the rate limiter and the KV.
+// This only keeps obvious garbage out of the throttles.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default {
@@ -132,17 +135,19 @@ async function sendLink(request, env, ctx) {
   if (email.length > 254 || !EMAIL_RE.test(email)) return json({ ok: false, error: 'invalid-email' }, 400);
 
   // Per-IP: a handful a minute is plenty for a person, nothing for a script.
-  if (env.SEND_LIMIT) {
-    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-    const { success } = await env.SEND_LIMIT.limit({ key: ip });
-    if (!success) return json({ ok: false, error: 'rate-limited' }, 429);
+  // Keys are peppered hashes, so the throttle never stores a raw IP either.
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const ipKey = 'ip:' + (await sha256hex(`${env.HASH_PEPPER || ''}|${ip}`));
+  if (!(await throttle(env, ipKey, 'take', 5, 60)).allowed) {
+    return json({ ok: false, error: 'rate-limited' }, 429);
   }
 
-  // Per-recipient: one message per address per day, keyed by a peppered hash
-  // so the KV never holds an address. This is what stops the endpoint being
-  // used to pester someone.
-  const recipientKey = 'sent:' + (await sha256hex(`${env.HASH_PEPPER || ''}|${email}`));
-  if (env.SENT && (await env.SENT.get(recipientKey))) {
+  // Per-recipient: one message per address per day. This is what stops the
+  // endpoint being used to pester someone. The slot is taken *before* sending
+  // so two simultaneous requests can't both get through, and handed back if
+  // the provider fails so a transient error doesn't burn the day's message.
+  const recipientKey = 'rcpt:' + (await sha256hex(`${env.HASH_PEPPER || ''}|${email}`));
+  if (!(await throttle(env, recipientKey, 'take', 1, 86400)).allowed) {
     return json({ ok: false, error: 'already-sent' });
   }
 
@@ -164,11 +169,16 @@ async function sendLink(request, env, ctx) {
   });
 
   if (!res.ok) {
+    // Surface the provider's reason in `wrangler tail` / Workers Logs. The
+    // body is Resend's error JSON (never the key); trimmed so a surprise
+    // HTML page can't flood the log.
+    const detail = (await res.text().catch(() => '')).slice(0, 300);
+    console.error(`resend ${res.status} for send-link: ${detail}`);
+    ctx.waitUntil(throttle(env, recipientKey, 'release', 1, 86400));
     ctx.waitUntil(record(env, request, { kind: 'send-link', src: `error:${res.status}` }));
     return json({ ok: false, error: 'send-failed' }, 502);
   }
 
-  if (env.SENT) ctx.waitUntil(env.SENT.put(recipientKey, '1', { expirationTtl: 86400 }));
   ctx.waitUntil(record(env, request, { kind: 'send-link', src }));
   return json({ ok: true });
 }

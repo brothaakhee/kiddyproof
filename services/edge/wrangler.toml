@@ -1,0 +1,52 @@
+# kiddyproof-edge — the two paths that need real measurement.
+#
+#   /appcast.xml   every installed copy fetches this via Sparkle (~daily), so
+#                  counting unique requesters = active installs. Passed through
+#                  to the Railway origin untouched; only observed.
+#   /download      the marketing download. Logged (OS, bot, source, referrer)
+#                  then 302'd to the GitHub asset. The site never links GitHub
+#                  directly any more, so GitHub's counter can be ignored.
+#
+# Routes only fire once the DNS records are proxied through Cloudflare.
+# Until then the origin serves both paths itself (site/download/index.html is
+# a meta-refresh fallback), so nothing breaks in either state.
+
+name = "kiddyproof-edge"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+ORIGIN_HOST = "kiddyproof.app"
+
+# Secret, set once with:  openssl rand -hex 32 | npx wrangler secret put HASH_PEPPER
+# Peppers the install-id hash so IPs cannot be recovered from the dataset.
+# (HASH_PEPPER is a secret, not a var — listed here only for discoverability.)
+
+[[analytics_engine_datasets]]
+binding = "STATS"
+dataset = "kiddyproof_stats"
+
+[[routes]]
+pattern = "kiddyproof.app/appcast.xml"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "kiddyproof.app/download"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "kiddyproof.app/download/*"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "www.kiddyproof.app/appcast.xml"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "www.kiddyproof.app/download"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "www.kiddyproof.app/download/*"
+zone_name = "kiddyproof.app"

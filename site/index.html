@@ -489,6 +489,13 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 }
 .try-lead b { color: #fff; font-weight: 600; }
 .try-sub { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
+.mac-note { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
+.mac-note .copy-link {
+  margin-left: 6px; padding: 3px 11px; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--ink-soft);
+  background: none; border: 1px solid rgba(255,255,255,0.16);
+}
+.mac-note .copy-link:hover { border-color: rgba(255,255,255,0.32); color: #fff; }
 .try-sub kbd {
   font: inherit; font-weight: 700; font-size: 12px;
   padding: 2px 7px; border-radius: 6px; color: var(--ink-soft);
@@ -844,7 +851,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#how">How it works</a>
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
-      <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn btn-primary btn-sm nav-cta">Download</a>
+      <a href="/download?src=nav" class="btn btn-primary btn-sm nav-cta">Download</a>
     </div>
   </div>
 </nav>
@@ -869,7 +876,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
             Try it here
           </button>
-          <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn-dl">
+          <a href="/download?src=hero" class="btn-dl">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
             Download for macOS
           </a>
@@ -1012,7 +1019,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <h2>Let them play.<br/><em>Get back to work.</em></h2>
       <p>Free for 3 days, then a one-time <a href="/buy"><span data-kp-price></span> license</a> — no subscription, no account. Developer-ID signed for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
       <div class="hero-actions">
-        <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn btn-primary">
+        <a href="/download?src=bottom" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
           Download for macOS
         </a>
@@ -1064,9 +1071,57 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
    ============================================================ */
 (function () {
   const track = (name, data) => { try { window.umami && window.umami.track(name, data); } catch (e) {} };
-  // Downloads: only real DMG links count. (The footer "Download" is an
-  // in-page #download scroll anchor, not a download — excluded on purpose.)
-  document.querySelectorAll('a[href*="releases"], a[href*=".dmg"]').forEach(a => {
+  // Platform gate. The DMG is useless on a phone, and during the ad campaign
+  // almost every visitor was on one (958 iOS + 650 Android against 22 Macs).
+  // Anyone not on a real Mac gets "email yourself the link" instead of a dead
+  // download, and never touches /download — so that series only ever counts
+  // machines that can run the app. iPadOS reports itself as a Mac but has a
+  // touchscreen; touch points break the tie. ?forceMobile=1 previews this
+  // state on a desktop.
+  const onMac = (() => {
+    if (/[?&]forceMobile=1/.test(location.search)) return false;
+    const p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    const macLike = /mac/i.test(p) || /Macintosh/.test(navigator.userAgent);
+    return macLike && (navigator.maxTouchPoints || 0) <= 1;
+  })();
+  if (!onMac) {
+    const link = 'https://kiddyproof.app/';
+    const mailto = 'mailto:?subject=' + encodeURIComponent('kiddyproof for your Mac')
+      + '&body=' + encodeURIComponent('Open this on your Mac to download kiddyproof:\n\n' + link);
+    document.querySelectorAll('a[href^="/download"]').forEach(a => {
+      const where = a.closest('nav') ? 'nav' : 'body';
+      a.href = mailto;
+      setLabel(a, where === 'nav' ? 'Send to my Mac' : 'Email me the link');
+      a.addEventListener('click', () => {
+        track('send-to-mac', { where });
+        try { window.fbq && fbq('trackCustom', 'KiddyproofSendToMac'); } catch (e) {}
+      });
+      if (where === 'nav') return;
+      const note = document.createElement('p');
+      note.className = 'mac-note';
+      note.innerHTML = 'kiddyproof is a Mac app — send yourself the link and open it on your Mac. '
+        + '<button type="button" class="copy-link">Copy link</button>';
+      a.parentElement.insertAdjacentElement('afterend', note);
+      note.querySelector('.copy-link').addEventListener('click', async (ev) => {
+        try { await navigator.clipboard.writeText(link); ev.target.textContent = 'Copied'; }
+        catch (e) { ev.target.textContent = link; }
+      });
+    });
+  }
+  function setLabel(a, text) {
+    // Anchors carry an <svg> icon then a text node; replace only the text.
+    for (let i = a.childNodes.length - 1; i >= 0; i--) {
+      const n = a.childNodes[i];
+      if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = ' ' + text + '\n'; return; }
+    }
+    a.appendChild(document.createTextNode(' ' + text));
+  }
+
+  // Downloads: clicks on the owned /download link. On a Mac these are the only
+  // anchors left matching; on anything else they were rewritten above and are
+  // counted as send-to-mac instead. (The footer "Download" is an in-page
+  // #download scroll anchor, not a download — excluded on purpose.)
+  document.querySelectorAll('a[href^="/download"]').forEach(a => {
     a.addEventListener('click', () => {
       track('download', { where: a.closest('nav') ? 'nav' : 'body' });
       // Meta ad conversion: standard Lead (optimizable now) + a kiddyproof-specific custom event.

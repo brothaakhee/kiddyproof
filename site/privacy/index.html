@@ -62,7 +62,7 @@
     <h2>2. Information We Collect</h2>
 
     <h3>2.1 Information you provide</h3>
-    <p>We collect information you submit directly, which is limited to the contents of any correspondence you send to us by email, and the information associated with a purchase as described in Section 2.4.</p>
+    <p>We collect information you submit directly: the contents of any correspondence you send to us by email; the information associated with a purchase as described in Section 2.4; and, if you use the &ldquo;send me the link&rdquo; form on the Site, the email address you enter. That address is used solely to send you one message containing the download link. It is not stored, not added to any list, and not used for any other purpose; a salted hash of it is retained for 24 hours only to prevent repeated sends to the same address.</p>
 
     <h3>2.2 Information stored locally by the Application</h3>
     <p>The Application does not require an account and contains no analytics or telemetry components. The following information is stored locally on your device and is not transmitted to us:</p>
@@ -91,7 +91,7 @@
     <p>Following purchase, an activation page operated by us exchanges the license key issued by Lemon Squeezy for a key readable by the Application. That page transmits the submitted key to the Lemon Squeezy API for verification and receives the associated order details in response. The activation service does not maintain a database and does not retain submitted keys or email addresses; its operational logs record an order identifier only. Once issued, the resulting key is verified by the Application locally and without network access.</p>
 
     <h3>2.6 Information collected automatically</h3>
-    <p>When you visit the Site, our analytics software records aggregate information including pages viewed, approximate country of origin, referring website, browser type and device type. Advertising technology on our marketing pages records page views and certain actions as described in Section 5.</p>
+    <p>When you visit the Site, our analytics software records aggregate information including pages viewed, approximate country of origin, referring website, browser type and device type. Requests for the download link and for the Application&rsquo;s update manifest are additionally recorded at our edge network as aggregate datapoints (operating system, approximate country, network operator, and a salted, non-reversible hash of the requesting address) so that we can count downloads and active installations. No raw IP address is stored. Advertising technology on our marketing pages records page views and certain actions as described in Section 5.</p>
     <p>The Application periodically requests an update manifest from our server. This request discloses your IP address and a user-agent string identifying the Application version and operating system version. It does not include your license key or any usage information. Automatic update checks can be disabled in the Application.</p>
   </section>
 
@@ -133,7 +133,8 @@
           <tr><td>Lemon Squeezy, LLC</td><td>Merchant of record; payment processing, tax and license issuance</td></tr>
           <tr><td>Meta Platforms, Inc.</td><td>Advertising measurement on marketing pages</td></tr>
           <tr><td>Railway Corp.</td><td>Website and activation service hosting</td></tr>
-          <tr><td>Cloudflare, Inc.</td><td>DNS and email forwarding</td></tr>
+          <tr><td>Cloudflare, Inc.</td><td>DNS, edge routing, email forwarding, and aggregate request analytics</td></tr>
+          <tr><td>Resend, Inc.</td><td>Delivery of the download-link email you request</td></tr>
         </tbody>
       </table>
     </div>

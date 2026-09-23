@@ -18,6 +18,24 @@ workers_dev = true
 
 [vars]
 ORIGIN_HOST = "kiddyproof.app"
+FROM_ADDRESS = "kiddyproof <hello@kiddyproof.app>"
+REPLY_TO = "hello@kiddyproof.app"
+
+# Secrets (wrangler secret put): HASH_PEPPER, RESEND_API_KEY.
+# Without RESEND_API_KEY, POST /send-link answers 503 "unavailable" and the
+# page falls back to a self-addressed mailto — nothing breaks, nothing sends.
+
+# Per-recipient throttle for /send-link: one message per address per day.
+# Keys are peppered hashes; the namespace never holds an email address.
+[[kv_namespaces]]
+binding = "SENT"
+id = "ac1700560c514062b1edfc882b179eab"
+
+# Per-IP throttle for /send-link. period must be 10 or 60.
+[[ratelimits]]
+name = "SEND_LIMIT"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }
 
 # Secret, set once with:  openssl rand -hex 32 | npx wrangler secret put HASH_PEPPER
 # Peppers the install-id hash so IPs cannot be recovered from the dataset.
@@ -38,7 +56,15 @@ pattern = "kiddyproof.app/download*"
 zone_name = "kiddyproof.app"
 
 [[routes]]
+pattern = "kiddyproof.app/send-link"
+zone_name = "kiddyproof.app"
+
+[[routes]]
 pattern = "www.kiddyproof.app/appcast.xml"
+zone_name = "kiddyproof.app"
+
+[[routes]]
+pattern = "www.kiddyproof.app/send-link"
 zone_name = "kiddyproof.app"
 
 [[routes]]

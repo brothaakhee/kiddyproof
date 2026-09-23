@@ -489,13 +489,30 @@ a:focus-visible, .btn:focus-visible, button:focus-visible {
 }
 .try-lead b { color: #fff; font-weight: 600; }
 .try-sub { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
-.mac-note { margin-top: 14px; font-size: 14px; color: var(--ink-mute); }
-.mac-note .copy-link {
-  margin-left: 6px; padding: 3px 11px; border-radius: 999px; cursor: pointer;
-  font: inherit; font-size: 13px; color: var(--ink-soft);
-  background: none; border: 1px solid rgba(255,255,255,0.16);
+.mac-note { margin: 0 0 12px; font-size: 14.5px; color: var(--ink-mute); line-height: 1.5; }
+.send-link { margin-top: 18px; max-width: 460px; margin-left: auto; margin-right: auto; text-align: center; }
+.send-row { display: flex; gap: 8px; }
+.send-row input {
+  flex: 1; min-width: 0; padding: 12px 14px; border-radius: 999px;
+  font: inherit; font-size: 15px; color: #fff;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
 }
-.mac-note .copy-link:hover { border-color: rgba(255,255,255,0.32); color: #fff; }
+.send-row input::placeholder { color: var(--ink-dim); }
+.send-row input:focus { outline: none; border-color: rgba(255,200,115,0.6); background: rgba(255,255,255,0.09); }
+.send-row button {
+  flex: none; padding: 12px 18px; border-radius: 999px; border: 0; cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 700; color: #2a1c05;
+  background: linear-gradient(180deg, var(--gold), var(--amber));
+}
+.send-row button:disabled { opacity: .6; cursor: default; }
+.send-link .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.send-status { margin: 10px 0 0; min-height: 1.4em; font-size: 14px; color: var(--ink-soft); }
+.send-status a { color: var(--amber); }
+.send-status .copy-link {
+  background: none; border: 0; padding: 0; font: inherit; color: var(--amber);
+  text-decoration: underline; cursor: pointer;
+}
+@media (max-width: 480px) { .send-row { flex-direction: column; } .send-row button { width: 100%; } }
 .try-sub kbd {
   font: inherit; font-weight: 700; font-size: 12px;
   padding: 2px 7px; border-radius: 6px; color: var(--ink-soft);
@@ -1073,9 +1090,9 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
   const track = (name, data) => { try { window.umami && window.umami.track(name, data); } catch (e) {} };
   // Platform gate. The DMG is useless on a phone, and during the ad campaign
   // almost every visitor was on one (958 iOS + 650 Android against 22 Macs).
-  // Anyone not on a real Mac gets "email yourself the link" instead of a dead
-  // download, and never touches /download — so that series only ever counts
-  // machines that can run the app. iPadOS reports itself as a Mac but has a
+  // Anyone not on a real Mac gets a form that emails them the link instead of
+  // a dead download, and never touches /download — so that series only ever
+  // counts machines that can run the app. iPadOS reports itself as a Mac but has a
   // touchscreen; touch points break the tie. ?forceMobile=1 previews this
   // state on a desktop.
   const onMac = (() => {
@@ -1086,27 +1103,86 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
   })();
   if (!onMac) {
     const link = 'https://kiddyproof.app/';
+    // Fallback if the email endpoint is unavailable: a self-addressed message.
     const mailto = 'mailto:?subject=' + encodeURIComponent('kiddyproof for your Mac')
       + '&body=' + encodeURIComponent('Open this on your Mac to download kiddyproof:\n\n' + link);
-    document.querySelectorAll('a[href^="/download"]').forEach(a => {
-      const where = a.closest('nav') ? 'nav' : 'body';
-      a.href = mailto;
-      setLabel(a, where === 'nav' ? 'Send to my Mac' : 'Email me the link');
-      a.addEventListener('click', () => {
-        track('send-to-mac', { where });
-        try { window.fbq && fbq('trackCustom', 'KiddyproofSendToMac'); } catch (e) {}
-      });
-      if (where === 'nav') return;
-      const note = document.createElement('p');
-      note.className = 'mac-note';
-      note.innerHTML = 'kiddyproof is a Mac app — send yourself the link and open it on your Mac. '
-        + '<button type="button" class="copy-link">Copy link</button>';
-      a.parentElement.insertAdjacentElement('afterend', note);
-      note.querySelector('.copy-link').addEventListener('click', async (ev) => {
-        try { await navigator.clipboard.writeText(link); ev.target.textContent = 'Copied'; }
-        catch (e) { ev.target.textContent = link; }
-      });
+
+    document.querySelectorAll('a[href^="/download"]').forEach((a, i) => {
+      const where = a.closest('nav') ? 'nav' : (i === 1 ? 'hero' : 'bottom');
+      if (where === 'nav') {
+        // The nav button just brings the form into view.
+        a.href = '#send-link';
+        setLabel(a, 'Send to my Mac');
+        return;
+      }
+      const form = buildSendForm(where);
+      // The button row keeps "Try it here" / "See how it works"; the form sits
+      // under it where the download button's explanation would have been.
+      a.parentElement.insertAdjacentElement('afterend', form);
+      a.remove();
     });
+
+    function buildSendForm(where) {
+      const form = document.createElement('form');
+      form.className = 'send-link';
+      form.noValidate = true;
+      if (where === 'hero') form.id = 'send-link';
+      form.innerHTML =
+        '<p class="mac-note">kiddyproof is a Mac app. Enter your email and we’ll send you the link to open on your Mac.</p>'
+        + '<div class="send-row">'
+        +   '<input type="email" name="email" placeholder="you@example.com" autocomplete="email" inputmode="email" required aria-label="Email address" />'
+        +   '<button type="submit">Send me the link</button>'
+        + '</div>'
+        // Honeypot: off-screen, unlabeled, ignored by people, filled by bots.
+        + '<input type="text" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp" />'
+        + '<p class="send-status" role="status" aria-live="polite"></p>';
+      const input  = form.querySelector('input[name=email]');
+      const button = form.querySelector('button');
+      const status = form.querySelector('.send-status');
+
+      const fallback = () => {
+        status.innerHTML = 'Couldn’t send right now. <a href="' + mailto + '">Email yourself the link</a> or '
+          + '<button type="button" class="copy-link">copy it</button>.';
+        status.querySelector('.copy-link').addEventListener('click', async (ev) => {
+          try { await navigator.clipboard.writeText(link); ev.target.textContent = 'copied'; }
+          catch (e) { ev.target.textContent = link; }
+        });
+      };
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const email = input.value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          status.textContent = 'That doesn’t look like an email address.';
+          input.focus();
+          return;
+        }
+        button.disabled = true; button.textContent = 'Sending…'; status.textContent = '';
+        let result = 'network';
+        try {
+          const r = await fetch('/send-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, hp: form.querySelector('.hp').value, src: where }),
+          });
+          const d = await r.json().catch(() => ({}));
+          result = d.ok ? 'ok' : (d.error || 'error');
+        } catch (e) {}
+        track('send-link', { where, result });
+        if (result === 'ok') {
+          form.querySelector('.send-row').hidden = true;
+          status.textContent = 'Sent. Open the email on your Mac — it can take a minute to arrive.';
+          try { window.fbq && fbq('trackCustom', 'KiddyproofSendLink'); } catch (e) {}
+          return;
+        }
+        button.disabled = false; button.textContent = 'Send me the link';
+        if (result === 'already-sent') status.textContent = 'We already sent a link to that address today — check your inbox and spam folder.';
+        else if (result === 'invalid-email') status.textContent = 'That doesn’t look like an email address.';
+        else if (result === 'rate-limited') status.textContent = 'Too many requests — please try again in a minute.';
+        else fallback();
+      });
+      return form;
+    }
   }
   function setLabel(a, text) {
     // Anchors carry an <svg> icon then a text node; replace only the text.

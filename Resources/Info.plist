@@ -28,6 +28,22 @@
 	     CGEventTapCreate on Sequoia even with Accessibility granted. -->
 	<key>LSUIElement</key>
 	<true/>
+	<!-- Deep link for one-click activation after purchase: the web /activate page
+	     hands the signed key straight to the app as kiddyproof://activate?key=… so
+	     a buyer never copies anything. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.kiddyproof.activation</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kiddyproof</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSHumanReadableCopyright</key>

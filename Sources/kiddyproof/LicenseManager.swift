@@ -86,13 +86,29 @@ final class LicenseManager {
         NSApp.activate(ignoringOtherApps: true)
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            if store(key: field.stringValue) != nil {
+            let entered = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if store(key: entered) != nil {
                 confirm(title: "License activated",
                         text: "Thank you! kiddyproof is now fully unlocked on this Mac.")
                 return true
             }
-            confirm(title: "Invalid license key",
-                    text: "That key didn't validate. Check for missing characters and try again.")
+            // The common failure here isn't a typo — it's pasting the key from
+            // the store receipt, which has to be swapped for an app key first.
+            // Telling that person to "check for missing characters" sends them
+            // hunting for a problem that isn't there.
+            if !entered.isEmpty && !entered.uppercased().hasPrefix("KIDDY.") {
+                // Point at a page that definitely exists. The Creem customer
+                // portal shows the order key with no link back to activation,
+                // so "use the link in your receipt" was a dead end.
+                confirm(title: "That looks like your store key",
+                        text: "The key from your receipt is your order key — it isn't the one "
+                            + "kiddyproof uses.\n\nGo to kiddyproof.app/activate and paste it "
+                            + "there. You'll get a key starting with KIDDY. and kiddyproof will "
+                            + "unlock itself.")
+            } else {
+                confirm(title: "Invalid license key",
+                        text: "That key didn't validate. Check for missing characters and try again.")
+            }
             return false
         case .alertSecondButtonReturn:
             NSWorkspace.shared.open(Self.purchaseURL)

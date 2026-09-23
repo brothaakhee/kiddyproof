@@ -240,6 +240,51 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func checkForUpdates() { UpdaterSupport.checkForUpdates() }
     @objc private func quit() { settings.flush(); disarmKidMode(reason: "quit"); NSApp.terminate(nil) }
 
+    // MARK: - kiddyproof:// deep link (one-click activation after purchase)
+
+    // After checkout the web /activate page hands the signed key straight here,
+    // so a buyer never copies anything. Builds older than this scheme simply
+    // don't register it and fall back to the paste field — which is why that
+    // path still exists.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme?.lowercased() == "kiddyproof" {
+            handleActivationURL(url)
+        }
+    }
+
+    private func handleActivationURL(_ url: URL) {
+        // Accept both kiddyproof://activate?key=… and kiddyproof:///activate?key=…
+        let action = (url.host ?? url.path).trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+        guard action == "activate" else { return }
+        guard let key = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "key" })?.value?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !key.isEmpty else { return }
+
+        NSApp.activate(ignoringOtherApps: true)
+
+        // Re-opening the same link (bookmarked receipt, second click) shouldn't
+        // pop a redundant dialog.
+        if case .licensed = license.entitlement, license.storedKey == key { return }
+
+        if license.store(key: key) != nil {
+            setupStatusItem()   // rebuild so the menu reads "Licensed ✓"
+            activationAlert(title: "License activated",
+                            text: "Thank you! kiddyproof is now fully unlocked on this Mac.")
+        } else {
+            activationAlert(title: "That license key didn\u{2019}t validate",
+                            text: "Open the activation link from your receipt again, or email "
+                                + "hello@kiddyproof.app with your order number and I\u{2019}ll sort it out.")
+        }
+    }
+
+    private func activationAlert(title: String, text: String) {
+        let a = NSAlert()
+        a.messageText = title
+        a.informativeText = text
+        a.runModal()
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         settings.flush()
         CrashSentinel.endCleanly()

@@ -9,6 +9,25 @@
     <description>Release feed for the kiddyproof macOS app.</description>
     <language>en</language>
     <item>
+      <title>1.0.4</title>
+      <description><![CDATA[
+        <h3>Clearer help for the key on your receipt</h3>
+        <p>The key on your receipt is your order key, not the one kiddyproof uses.
+        kiddyproof now recognises it and points you at kiddyproof.app/activate, which
+        swaps it for your licence and unlocks the app. It used to just say the key was
+        invalid and suggest checking for typos.</p>
+      ]]></description>
+      <pubDate>Wed, 23 Sep 2026 19:10:20 +0000</pubDate>
+      <sparkle:version>202609231408</sparkle:version>
+      <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/brothaakhee/kiddyproof-releases/releases/download/v1.0.4/kiddyproof-1.0.4.dmg"
+        sparkle:edSignature="sLhbI2q4Mj6M2n+2SMdwUNEvnrpOuP7wfIDzApKhgtK8uLvsqOG/C0Lf+B1osMQ/2XQxjfWM33Zan+wF894xAQ=="
+        length="2779508"
+        type="application/octet-stream" />
+    </item>
+    <item>
       <title>1.0.3</title>
       <description><![CDATA[
         <h3>One-click activation</h3>

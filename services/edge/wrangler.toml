@@ -32,11 +32,9 @@ pattern = "kiddyproof.app/appcast.xml"
 zone_name = "kiddyproof.app"
 
 [[routes]]
-pattern = "kiddyproof.app/download"
-zone_name = "kiddyproof.app"
-
-[[routes]]
-pattern = "kiddyproof.app/download/*"
+# download* (not /download + /download/*): an exact pattern does not match
+# when a query string is present, and the site links /download?src=...
+pattern = "kiddyproof.app/download*"
 zone_name = "kiddyproof.app"
 
 [[routes]]
@@ -44,9 +42,7 @@ pattern = "www.kiddyproof.app/appcast.xml"
 zone_name = "kiddyproof.app"
 
 [[routes]]
-pattern = "www.kiddyproof.app/download"
-zone_name = "kiddyproof.app"
-
-[[routes]]
-pattern = "www.kiddyproof.app/download/*"
+# download* (not /download + /download/*): an exact pattern does not match
+# when a query string is present, and the site links /download?src=...
+pattern = "www.kiddyproof.app/download*"
 zone_name = "kiddyproof.app"

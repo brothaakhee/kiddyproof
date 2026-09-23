@@ -1,32 +1,241 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buy kiddyproof</title>
-<link rel="icon" href="/favicon.ico">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Buy kiddyproof — one-time license</title>
+<meta name="description" content="A one-time kiddyproof license. Yours forever, no subscription and no account." />
+<link rel="canonical" href="https://kiddyproof.app/buy" />
+<meta name="robots" content="index,follow" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="kiddyproof" />
+<meta property="og:title" content="Buy kiddyproof — one-time license" />
+<meta property="og:description" content="A one-time kiddyproof license. Yours forever, no subscription and no account." />
+<meta property="og:url" content="https://kiddyproof.app/buy" />
+<meta property="og:image" content="https://kiddyproof.app/og.png" />
+
+<!-- License price — single source of truth (/price.js). Synchronous so
+     window.KIDDYPROOF_PRICE is available to the inline script below. -->
+<script src="/price.js"></script>
+
+<!-- Analytics: same self-hosted Umami instance as the landing page. -->
+<script defer src="https://umami-production-c71b.up.railway.app/script.js"
+        data-website-id="4f9a7d9a-5c29-42a4-a347-41dc9a25a3ea"></script>
+
+<!-- Meta Pixel — same shared landrush dataset as the landing page. -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','1594743668996830');fbq('track','PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1594743668996830&ev=PageView&noscript=1" alt=""/></noscript>
+
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-         background: #0b0e1a; color: #e8e9f0;
-         font: 17px/1.6 -apple-system, "Hanken Grotesk", sans-serif; }
-  .card { max-width: 30rem; padding: 3rem 2rem; text-align: center; }
-  h1 { font-size: 1.7rem; margin-bottom: .4rem; }
-  p { color: #aab; }
-  a.btn { display: inline-block; margin-top: 1.2rem; padding: .8rem 1.6rem;
-          border-radius: 999px; background: #7c8cff; color: #0b0e1a;
-          font-weight: 700; text-decoration: none; }
-  a { color: #9aa6ff; }
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/hanken-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/hanken-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --night-0: #06070e;
+  --night-1: #0a0c18;
+  --night-2: #0f1226;
+  --night-3: #151a36;
+  --ink:      #edeef7;
+  --ink-soft: #c4c8e0;
+  --ink-mute: #8a90b4;
+  --ink-dim:  #5c6188;
+  --gold:  #ffe6a0;
+  --amber: #ffc873;
+  --cyan:  #9ce0ff;
+  --line: rgba(156, 224, 255, 0.10);
+  --line-soft: rgba(255, 255, 255, 0.06);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 620px at 50% -10%, rgba(255, 200, 115, 0.10), transparent 62%),
+    var(--night-0);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px 64px;
+}
+a { color: var(--cyan); }
+.back {
+  align-self: flex-start;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto 28px;
+  font-size: 15px;
+  color: var(--ink-mute);
+  text-decoration: none;
+}
+.back:hover { color: var(--ink-soft); }
+.wrap { width: 100%; max-width: 560px; margin: 0 auto; }
+
+.card {
+  background: linear-gradient(180deg, rgba(21, 26, 54, 0.72), rgba(10, 12, 24, 0.72));
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 40px 34px;
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(28px, 6vw, 36px);
+  line-height: 1.15;
+  margin: 0 0 10px;
+}
+.sub { color: var(--ink-soft); margin: 0 auto 26px; max-width: 40ch; }
+
+.price { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-bottom: 4px; }
+.price .amount { font-family: var(--font-display); font-size: 54px; font-weight: 600; letter-spacing: -0.02em; }
+.price .unit { color: var(--ink-mute); font-size: 16px; }
+.price-note { color: var(--ink-dim); font-size: 14px; margin: 0 0 28px; }
+
+.btn {
+  display: inline-block;
+  padding: 16px 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--gold), var(--amber));
+  color: #2a1c05;
+  font-weight: 700;
+  font-size: 17px;
+  text-decoration: none;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+  box-shadow: 0 10px 34px rgba(255, 200, 115, 0.22);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(255, 200, 115, 0.30); }
+
+.flist { list-style: none; padding: 0; margin: 30px 0 0; text-align: left; display: grid; gap: 12px; }
+.flist li { display: flex; gap: 11px; align-items: flex-start; color: var(--ink-soft); font-size: 15.5px; }
+.flist svg { width: 18px; height: 18px; flex: none; margin-top: 4px; color: var(--amber); }
+
+.after {
+  margin-top: 26px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 22px;
+  text-align: left;
+}
+.after h2 { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-mute); margin: 0 0 10px; font-weight: 600; }
+.after ol { margin: 0; padding-left: 20px; color: var(--ink-soft); font-size: 15.5px; }
+.after li { margin-bottom: 7px; }
+
+.help { margin-top: 26px; border: 1px solid rgba(255,200,115,.28);
+  background: rgba(255,200,115,.06); border-radius: 16px; padding: 18px 20px; text-align: left; }
+.help p { margin: 0; color: var(--ink-soft); font-size: 15.5px; line-height: 1.6; }
+.help p + p { margin-top: 5px; }
+.help strong { color: var(--ink); display: block; margin-bottom: 3px; }
+.help a { color: var(--amber); font-weight: 600; }
+.foot { text-align: center; color: var(--ink-dim); font-size: 14px; margin-top: 26px; line-height: 1.75; }
+.foot a { color: var(--ink-mute); }
 </style>
 </head>
 <body>
+
+<a class="back" href="/">&larr; kiddyproof.app</a>
+
+<main class="wrap">
   <div class="card">
-    <h1>Buy kiddyproof</h1>
-    <p>One-time license, yours forever. Checkout is coming online — until then,
-       email us and we'll set you up the same day.</p>
-    <a class="btn" href="mailto:hello@kiddyproof.app?subject=kiddyproof%20license">
-      Get a license by email</a>
-    <p><a href="/">← back to kiddyproof.app</a></p>
+    <h1>One license.<br/>Yours forever.</h1>
+    <p class="sub">No subscription, no account, no cloud. Buy it once and it keeps working.</p>
+
+    <div class="price">
+      <span class="amount" data-kp-price></span>
+      <span class="unit">one-time</span>
+    </div>
+    <p class="price-note">Includes every future update.</p>
+
+    <a class="btn" id="buy" href="https://www.creem.io/payment/prod_UTfF8FwKzp7B69IKFymW6">Buy kiddyproof</a>
+
+    <ul class="flist">
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Use it on all your own Macs</span></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Works fully offline — the app never phones home</span></li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span>Developer-ID signed — macOS 14 Sonoma or later, Apple Silicon</span></li>
+    </ul>
+
+    <div class="after">
+      <h2>After you pay</h2>
+      <ol>
+        <li>You land on a page with an <strong>Unlock kiddyproof</strong> button.</li>
+        <li>Click it — kiddyproof opens and licenses itself. Nothing to copy.</li>
+        <li>Bookmark that page — it can re-issue your key up to 5 times. Need it again after that?
+            Message me and I'll reset it.</li>
+      </ol>
+    </div>
   </div>
+
+  <div class="help">
+    <p><strong>Trouble buying, or didn't get your key?</strong></p>
+    <p>Email <a href="mailto:hello@kiddyproof.app?subject=kiddyproof%20license">hello@kiddyproof.app</a>
+       or DM <a href="https://x.com/brothaakhee" rel="noopener">@brothaakhee</a> on X.
+       Both reach me directly — if checkout misbehaves I'll send your licence by hand.</p>
+  </div>
+
+  <p class="foot">
+    Still on the free trial? <a href="/">Download kiddyproof</a> and try it for 3 days first.<br/>
+    <a href="/terms">Terms of Service</a> &middot; <a href="/privacy">Privacy Policy</a> &middot; Refundable within 14 days
+  </p>
+</main>
+
+<script>
+  // Count checkout intent in both Umami and the Meta pixel so the ad campaign
+  // can see the funnel past the download.
+  document.getElementById('buy').addEventListener('click', function () {
+    try { if (window.umami) window.umami.track('buy-click'); } catch (e) {}
+    try { if (window.fbq) fbq('track', 'InitiateCheckout',
+        { value: KIDDYPROOF_PRICE.amount, currency: KIDDYPROOF_PRICE.currency }); } catch (e) {}
+  });
+</script>
+
 </body>
 </html>

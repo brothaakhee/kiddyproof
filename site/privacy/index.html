@@ -85,10 +85,10 @@
     <p>The Application requires macOS Accessibility permission in order to suppress keyboard and pointer input while its restricted mode is active. Input events are processed transiently in memory for two purposes: rendering a corresponding on-screen character, and detecting the key combination that exits the restricted mode. Input is not recorded, logged, stored or transmitted, and the Application contains no facility to do so.</p>
 
     <h3>2.4 Purchase information</h3>
-    <p>Purchases are processed by Lemon Squeezy, LLC, which acts as merchant of record. Payment card details are submitted directly to Lemon Squeezy and its payment processors and are never received or stored by us. We receive order records consisting of the purchaser's email address, the license key issued, and transaction details such as amount, date and the country used for tax determination.</p>
+    <p>Purchases are processed by Creem, operated by Armitage Labs OÜ, which acts as merchant of record. Payment card details are submitted directly to Creem and its payment processors and are never received or stored by us. We receive order records consisting of the purchaser's email address, the license key issued, and transaction details such as amount, date and the country used for tax determination.</p>
 
     <h3>2.5 Activation</h3>
-    <p>Following purchase, an activation page operated by us exchanges the license key issued by Lemon Squeezy for a key readable by the Application. That page transmits the submitted key to the Lemon Squeezy API for verification and receives the associated order details in response. The activation service does not maintain a database and does not retain submitted keys or email addresses; its operational logs record an order identifier only. Once issued, the resulting key is verified by the Application locally and without network access.</p>
+    <p>Following purchase, an activation page operated by us issues a key readable by the Application. Creem returns you to that page with a checkout identifier; the page sends that identifier to the Creem API to confirm the purchase and receives the associated order details, including the purchaser's email address, in response. That email address is written into the issued key so the license is tied to the purchaser. The activation service does not maintain a database and does not retain email addresses; its operational logs record a checkout identifier only. Once issued, the resulting key is verified by the Application locally and without network access.</p>
 
     <h3>2.6 Information collected automatically</h3>
     <p>When you visit the Site, our analytics software records aggregate information including pages viewed, approximate country of origin, referring website, browser type and device type. Requests for the download link and for the Application&rsquo;s update manifest are additionally recorded at our edge network as aggregate datapoints (operating system, approximate country, network operator, and a salted, non-reversible hash of the requesting address) so that we can count downloads and active installations. No raw IP address is stored. Advertising technology on our marketing pages records page views and certain actions as described in Section 5.</p>
@@ -130,7 +130,7 @@
           <tr><th>Provider</th><th>Function</th></tr>
         </thead>
         <tbody>
-          <tr><td>Lemon Squeezy, LLC</td><td>Merchant of record; payment processing, tax and license issuance</td></tr>
+          <tr><td>Creem (Armitage Labs OÜ)</td><td>Merchant of record; payment processing, tax and license issuance</td></tr>
           <tr><td>Meta Platforms, Inc.</td><td>Advertising measurement on marketing pages</td></tr>
           <tr><td>Railway Corp.</td><td>Website and activation service hosting</td></tr>
           <tr><td>Cloudflare, Inc.</td><td>DNS, edge routing, email forwarding, and aggregate request analytics</td></tr>
@@ -143,7 +143,7 @@
 
   <section id="retention">
     <h2>7. Data Retention</h2>
-    <p>Order records are retained by Lemon Squeezy for the period required by applicable tax and accounting law. Correspondence is retained for as long as necessary to provide support and is then deleted. Analytics data is aggregate and is retained on a rolling basis. Information stored locally by the Application is retained on your device until you delete it.</p>
+    <p>Order records are retained by Creem for the period required by applicable tax and accounting law. Correspondence is retained for as long as necessary to provide support and is then deleted. Analytics data is aggregate and is retained on a rolling basis. Information stored locally by the Application is retained on your device until you delete it.</p>
   </section>
 
   <section id="transfers">

@@ -8,6 +8,11 @@
 
 <link rel="canonical" href="https://kiddyproof.app/" />
 
+<!-- Licence price — single source of truth. Edit AMOUNT in /price.js and every
+     price on this page (and the value sent to the pixel) follows. Synchronous
+     on purpose so window.KIDDYPROOF_PRICE exists for the inline scripts below. -->
+<script src="/price.js"></script>
+
 <!-- Analytics: self-hosted Umami (privacy-first, no cookies). Custom events
      for downloads, demo tries, and per-section reads are fired from the script
      below. Time-on-page + visitors are tracked automatically. -->
@@ -729,6 +734,16 @@ section { position: relative; }
     linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
 }
 .cta-card .minicat { width: 64px; height: 64px; margin: 0 auto 22px; display: block; filter: drop-shadow(0 0 18px rgba(255,200,115,0.4)); }
+/* Inline links in the closing card had no rule and fell back to the browser's
+   default blue — jarring in this palette, and it is the price that sits here. */
+.cta-card p a {
+  color: var(--amber);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 200, 115, 0.45);
+  text-underline-offset: 3px;
+  transition: color .2s ease, text-decoration-color .2s ease;
+}
+.cta-card p a:hover { color: var(--gold); text-decoration-color: var(--gold); }
 .cta h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.1rem, 4.4vw, 3.3rem); letter-spacing: -0.025em; line-height: 1.08; margin-bottom: 18px; }
 .cta h2 em { font-style: italic; color: var(--amber); }
 .cta p { color: var(--ink-soft); font-size: 1.12rem; max-width: 46ch; margin: 0 auto 34px; }
@@ -995,7 +1010,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
     <div class="cta-card reveal">
       <svg class="minicat" aria-hidden="true"><use href="#cat"/></svg>
       <h2>Let them play.<br/><em>Get back to work.</em></h2>
-      <p>Free for 3 days, then a one-time license — <a href="/buy">get yours here</a>. Developer-ID signed for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
+      <p>Free for 3 days, then a one-time <a href="/buy"><span data-kp-price></span> license</a> — no subscription, no account. Developer-ID signed for a clean, safe install — macOS 14 Sonoma or later, Apple Silicon.</p>
       <div class="hero-actions">
         <a href="https://github.com/brothaakhee/kiddyproof-releases/releases/latest/download/kiddyproof.dmg" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.643 0 2.928.06 4.42 2.18-.116.07-2.51 1.46-2.51 4.35 0 3.36 2.953 4.55 3.043 4.58z"/></svg>
@@ -1003,7 +1018,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
         </a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
-      <small>3-day free trial · one-time license · no account, no cloud</small>
+      <small>3-day free trial · <span data-kp-price></span> one-time · no account, no cloud</small>
     </div>
   </div>
 </section>
@@ -1020,6 +1035,8 @@ footer { border-top: 1px solid var(--line-soft); padding: 44px 0; }
       <a href="#effects">Effects</a>
       <a href="#safety">Safety</a>
       <a href="#download">Download</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
     </div>
     <span class="copy">© 2026 kiddyproof · made for parents, watched by a cat</span>
   </div>

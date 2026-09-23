@@ -13,8 +13,7 @@
       <description><![CDATA[
         <h3>One-click activation</h3>
         <p>After a purchase, kiddyproof now unlocks itself from the activation page —
-        there is no licence key to copy across. If you do paste a key from a receipt,
-        kiddyproof explains what to use instead.</p>
+        there is no licence key to copy across.</p>
       ]]></description>
       <pubDate>Wed, 23 Sep 2026 12:39:11 +0000</pubDate>
       <sparkle:version>202609211458</sparkle:version>

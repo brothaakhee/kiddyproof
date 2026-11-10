@@ -8,9 +8,18 @@ ripples, big flying letters, a black-hole cursor). Only a deliberate parent gest
 
 **Download:** [kiddyproof.app](https://kiddyproof.app) ·
 [Releases](https://github.com/brothaakhee/kiddyproof-releases/releases) —
-macOS 14 Sonoma+, Apple Silicon. 7-day free trial, then a one-time license.
-Developer-ID signed; auto-updates via Sparkle. This source repo is private;
-binaries ship from the public releases repo.
+macOS 14 Sonoma+, Apple Silicon. 3-day free trial, then a one-time license.
+Developer-ID signed; auto-updates via Sparkle. Source is MIT-licensed (this
+repo); signed, notarized binaries ship from the releases repo.
+
+**Who it's for:** parents of toddlers and preschoolers who want to let a kid bang on the
+laptop — or sit in on a video call — without losing a document, closing a tab, or
+emailing the boss.
+
+**Built with:** Swift 5.9 + AppKit, Core Graphics event taps and drawing,
+SceneKit/GLTFSceneKit for the 3D cat, Sparkle 2 for updates, and Swift Package
+Manager. The landing page is static HTML on Caddy; the purchase-activation
+service is a small Node server; download metering is a Cloudflare Worker.
 
 The architecture was designed and adversarially stress-tested before any code was
 written (see `docs/ARCHITECTURE.md`).
@@ -50,14 +59,14 @@ Scripts/package.sh               # release .app bundle + DMG (ad-hoc signed)
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=kiddyproof VERSION=1.0.0 Scripts/package.sh   # ship
 ```
 
-## Licensing (seller side)
+## License keys (seller side)
 License keys are offline Ed25519 signatures verified in
 `Sources/KiddyproofCore/License.swift` — no server, no phone-home. The private
 key lives in `secrets/` (gitignored; **back it up**). Issue a customer key:
 ```
 swift Scripts/make_license.swift issue customer@example.com
 ```
-The app grants a 7-day trial from first launch; arming kid mode after that
+The app grants a 3-day trial from first launch; arming kid mode after that
 requires a key (menu bar → Enter License Key…).
 
 ## Site & updates
@@ -79,3 +88,14 @@ block the hardware power button, Force Quit, accessibility shortcuts, or multi-f
 Mission Control swipes (would need a root HID tap / DriverKit virtual-HID). It must refuse
 to run when Secure Event Input is active. Not sandboxable / not Mac App Store — ships as a
 Developer-ID-signed, notarized direct download. See `POC_TEST_PLAN.md` for the full list.
+
+## Roadmap
+See [`ROADMAP.md`](ROADMAP.md).
+
+## License
+MIT — see [`LICENSE`](LICENSE). Third-party pieces keep their own licenses:
+[Sparkle](https://github.com/sparkle-project/Sparkle) (MIT-style),
+[GLTFSceneKit](https://github.com/magicien/GLTFSceneKit) (MIT), the Fraunces and
+Hanken Grotesk webfonts (SIL Open Font License 1.1). The 3D cat meshes in `Assets/`
+were generated for this project with Meshy. The parked `plant-canalisation` branch
+ports code from [aj-dev-smith/canalisation](https://github.com/aj-dev-smith/canalisation) (MIT).
